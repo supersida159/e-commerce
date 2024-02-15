@@ -32,7 +32,7 @@ func UploadImg(appctx app_context.Appcontext) gin.HandlerFunc {
 		}
 
 		imgStore := repositoy_upload.NewSQLStore(db)
-		biz := usecase_upload.NewUploadBiz(imgStore, appctx.UploadProvider())
+		biz := usecase_upload.NewUploadBiz(imgStore, appctx.UploadProvider(), appctx.GetPubSub())
 		img, err := biz.Upload(c.Request.Context(), dataBytes, folder, fileHeader.Filename)
 
 		if err != nil {

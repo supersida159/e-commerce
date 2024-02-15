@@ -62,3 +62,10 @@ func (s *sqlStore) UpdateUser(ctx context.Context, data *entities.UserUpdate) er
 	}
 	return nil
 }
+func (s *sqlStore) UpdateUserAddmin(ctx context.Context, data *entities.UserUpdate) error {
+	db := s.db
+	if err := db.Table(data.TableName()).Where("email = ?", data.Email).Updates(&data).Error; err != nil {
+		return common.ErrDB(err)
+	}
+	return nil
+}

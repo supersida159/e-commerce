@@ -7,19 +7,28 @@ import (
 	"github.com/supersida159/e-commerce/pkg/tokenprovider"
 )
 
+type UserRole int
+
 const (
-	EntityName = "User"
+	UserRoloUser UserRole = iota
+	UserRoleManager
+	UserRoleAdmin
 )
+
+func (u UserRole) String() string {
+	// convert const JobState to string
+	return []string{"user", "manager", "admin"}[u]
+}
 
 type User struct {
 	common.SQLModel `json:",inline"`
-	Email           string         `json:"email" gorm:"column:email;"`
-	Password        string         `json:"-" gorm:"column:password;"`
-	FirstName       string         `json:"first_name" gorm:"column:first_name;"`
-	LastName        string         `json:"last_name" gorm:"column:last_name;"`
-	Role            string         `json:"role" gorm:"column:role;"`
-	Salt            string         `json:"-" gorm:"column:salt;"`
-	Avatar          *common.Images `json:"avatar,omitempty" gorm:"column:avatar;type:json"`
+	Email           string        `json:"email" gorm:"column:email;unique;not null;index:idx_user_email"`
+	Password        string        `json:"-" gorm:"column:password;"`
+	FirstName       string        `json:"first_name" gorm:"column:first_name;"`
+	LastName        string        `json:"last_name" gorm:"column:last_name;"`
+	Role            string        `json:"role" gorm:"column:role;"`
+	Salt            string        `json:"-" gorm:"column:salt;"`
+	Avatar          *common.Image `json:"avatar,omitempty" gorm:"column:avatar;type:json"`
 }
 
 func (u *User) GetUserID() int {
@@ -82,13 +91,18 @@ func (u *UserCreate) Mask(isAdminOrOwner bool) {
 
 type UserUpdate struct {
 	common.SQLModel `json:",inline"`
-	Email           string         `json:"email" gorm:"column:email;"`
-	Password        string         `json:"password" gorm:"column:password;"`
-	FirstName       string         `json:"first_name" gorm:"column:first_name;"`
-	LastName        string         `json:"last_name" gorm:"column:last_name;"`
-	Role            string         `json:"-" gorm:"column:role;"`
-	Salt            string         `json:"-" gorm:"column:salt;"`
-	Avatar          *common.Images `json:"avatar,omitempty" gorm:"column:avatar;type:json"`
+	Email           string        `json:"email" gorm:"column:email;"`
+	Password        string        `json:"password" gorm:"column:password;"`
+	FirstName       string        `json:"first_name" gorm:"column:first_name;"`
+	LastName        string        `json:"last_name" gorm:"column:last_name;"`
+	Role            string        `json:"-" gorm:"column:role;"`
+	Salt            string        `json:"-" gorm:"column:salt;"`
+	Avatar          *common.Image `json:"avatar,omitempty" gorm:"column:avatar;type:json"`
+}
+
+type UpdatePermission struct {
+	UpdateEmail string `json:"updateEmail" gorm:"-"`
+	RoleUpdate  string `json:"roleUpdate" gorm:"-"`
 }
 
 func (UserUpdate) TableName() string {

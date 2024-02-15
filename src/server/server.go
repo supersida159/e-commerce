@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/supersida159/e-commerce/pkg/app_context"
 	"github.com/supersida159/e-commerce/pkg/config"
+	"github.com/supersida159/e-commerce/src/upload/route_upload"
 	"github.com/supersida159/e-commerce/src/users/route_user"
 )
 
@@ -43,6 +44,7 @@ func (s Server) GetEngine() *gin.Engine {
 func (s *Server) MapRoutes() error {
 	v1 := s.engine.Group("/api/v1")
 	route_user.Routes(v1.Group("/user"), s.appCtx)
+	route_upload.Routes(v1.Group("/upload"), s.appCtx)
 
 	return nil
 

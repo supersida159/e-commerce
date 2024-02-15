@@ -14,21 +14,23 @@ import (
 	"time"
 
 	"github.com/supersida159/e-commerce/common"
+	"github.com/supersida159/e-commerce/pkg/pubsub"
 	"github.com/supersida159/e-commerce/pkg/uploadprovider"
 	entities_Upload "github.com/supersida159/e-commerce/src/upload/entities_upload"
 )
 
 type CreateImageStore interface {
-	Create(ctx context.Context, data *entities_Upload.CreateUpload) error
+	// AddImage(ctx context.Context, data *common.Image) error
 }
 
 type uploadBiz struct {
 	provider uploadprovider.UploadProvider
 	imgStore CreateImageStore
+	pubsub   pubsub.PubSub
 }
 
-func NewUploadBiz(imgStore CreateImageStore, provider uploadprovider.UploadProvider) *uploadBiz {
-	return &uploadBiz{imgStore: imgStore, provider: provider}
+func NewUploadBiz(imgStore CreateImageStore, provider uploadprovider.UploadProvider, pubsub pubsub.PubSub) *uploadBiz {
+	return &uploadBiz{imgStore: imgStore, provider: provider, pubsub: pubsub}
 }
 
 func (biz *uploadBiz) Upload(ctx context.Context, data []byte, folder, fileName string) (*common.Image, error) {
@@ -58,6 +60,12 @@ func (biz *uploadBiz) Upload(ctx context.Context, data []byte, folder, fileName 
 	if err != nil {
 		return nil, entities_Upload.ErrCannotSaveFile(err)
 	}
+
+	// err = biz.imgStore.AddImage(ctx, img)
+	// if err != nil {
+	// 	return nil, entities_Upload.ErrCannotSaveImgOnDB(err)
+	// }
+
 	return img, nil
 
 }

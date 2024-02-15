@@ -9,6 +9,7 @@ import (
 	dbs "github.com/supersida159/e-commerce/pkg/db"
 	"github.com/supersida159/e-commerce/pkg/pubsub/pubsublocal"
 	"github.com/supersida159/e-commerce/pkg/redis"
+	"github.com/supersida159/e-commerce/src/product/entities_product"
 	httpServer "github.com/supersida159/e-commerce/src/server"
 	"github.com/supersida159/e-commerce/src/users/entities"
 	"github.com/supersida159/e-commerce/src/users/repository_user"
@@ -23,7 +24,10 @@ func main() {
 	if err != nil {
 		logrus.Fatal("Cannot connect to database", err)
 	}
-	err = db.AutoMigrate(&entities.User{})
+	err = db.AutoMigrate(&entities.User{}, &entities_product.Product{})
+	if err != nil {
+		logrus.Fatal(err)
+	}
 	cache := redis.NewRedis(redis.Config{
 		Address:  cfg.RedisURI,
 		Password: cfg.RedisPassword,

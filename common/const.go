@@ -5,6 +5,7 @@ const (
 	DbTypeFood       = 2
 	DbTypeCategory   = 3
 	DbTypeUser       = 4
+	DbTypeProduct    = 5
 )
 const (
 	CurrentUser = "user"

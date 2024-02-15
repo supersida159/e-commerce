@@ -7,4 +7,5 @@ import (
 const (
 	TopicUserLikeRestaurant   pubsub.Topic = "TopicUserLikeRestaurant"
 	TopicUserUnLikeRestaurant pubsub.Topic = "TopicUserUnLikeRestaurant"
+	TopicUploadImg            pubsub.Topic = "TopicUploadImg"
 )

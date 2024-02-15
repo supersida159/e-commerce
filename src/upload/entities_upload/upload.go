@@ -35,3 +35,10 @@ func ErrCannotSaveFile(err error) *common.AppError {
 		"cannot save file",
 		"ErrCannotSaveFile")
 }
+
+func ErrCannotSaveImgOnDB(err error) *common.AppError {
+	return common.NewCustomError(
+		err,
+		"cannot upload to db Image",
+		"ErrCannotSaveImage")
+}

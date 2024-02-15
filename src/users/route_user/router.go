@@ -14,6 +14,7 @@ func Routes(r *gin.RouterGroup, appCtx app_context.Appcontext) {
 	{
 		authRoute.GET("/infor", gin_user.GetProfile(appCtx))
 		authRoute.PUT("/update", gin_user.UpdateUser(appCtx))
+		authRoute.POST("/adminUpdate", gin_user.AddUpdateAddmin(appCtx))
 		// authRoute.POST("/register", userHandler.Register)
 		// authRoute.POST("/login", userHandler.Login)
 		// authRoute.POST("/refresh", refreshAuthMiddleware, userHandler.RefreshToken)

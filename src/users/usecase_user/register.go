@@ -31,7 +31,7 @@ func (b *RegisterBusiness) Register(ctx context.Context, data *entities.UserCrea
 
 	user, err := b.storeUser.FindUser(ctx, map[string]interface{}{"email": data.Email})
 	if user != nil {
-		return common.ErrEntityExisted(entities.EntityName, err)
+		return common.ErrEntityExisted(entities.UserRoloUser.String(), err)
 	}
 
 	salt := common.GenSalt(50)

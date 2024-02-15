@@ -46,7 +46,7 @@ func (b *LoginBusiness) Login(ctx context.Context, data *entities.UserLogin) (*e
 	fmt.Println("data", data)
 
 	if err != nil {
-		return nil, common.ErrCannotGetEntity(entities.EntityName, err)
+		return nil, common.ErrCannotGetEntity(entities.UserRoloUser.String(), err)
 	}
 
 	passHash := b.hasher.Hash(data.Password + user.Salt)
