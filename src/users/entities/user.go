@@ -28,6 +28,8 @@ type User struct {
 	LastName        string        `json:"last_name" gorm:"column:last_name;"`
 	Role            string        `json:"role" gorm:"column:role;"`
 	Salt            string        `json:"-" gorm:"column:salt;"`
+	Phone           string        `json:"phone" gorm:"column:phone;"`
+	Address         []Address     `json:"address" gorm:"column:address;type:jsonb"` // Using jsonb field
 	Avatar          *common.Image `json:"avatar,omitempty" gorm:"column:avatar;type:json"`
 }
 
@@ -46,9 +48,11 @@ func (u *User) GetRole() string {
 func (User) TableName() string {
 	return "users"
 }
-func (u *User) Mask(isAdmin bool) {
-	if isAdmin {
+func (u *User) Mask(hideID bool) {
+	if hideID {
 		u.GenUID(common.DbTypeUser)
+	} else if !hideID {
+		u.DeID()
 	}
 }
 
@@ -65,13 +69,16 @@ func (u *User) Mask(isAdmin bool) {
 
 type UserCreate struct {
 	common.SQLModel `json:",inline"`
-	Email           string         `json:"email" gorm:"column:email;"`
-	Password        string         `json:"password" gorm:"column:password;"`
-	FirstName       string         `json:"first_name" gorm:"column:first_name;"`
-	LastName        string         `json:"last_name" gorm:"column:last_name;"`
-	Role            string         `json:"-" gorm:"column:role;"`
-	Salt            string         `json:"-" gorm:"column:salt;"`
-	Avatar          *common.Images `json:"avatar,omitempty" gorm:"column:avatar;type:json"`
+	Email           string    `json:"email" gorm:"column:email;"`
+	Password        string    `json:"password" gorm:"column:password;"`
+	FirstName       string    `json:"first_name" gorm:"column:first_name;"`
+	LastName        string    `json:"last_name" gorm:"column:last_name;"`
+	Role            string    `json:"-" gorm:"column:role;"`
+	Salt            string    `json:"-" gorm:"column:salt;"`
+	Phone           string    `json:"phone" gorm:"column:phone;"`
+	Address         []Address `json:"address" gorm:"column:address;type:jsonb"` // Using jsonb field
+
+	Avatar *common.Images `json:"avatar,omitempty" gorm:"column:avatar;type:json"`
 }
 
 func (UserCreate) TableName() string {
@@ -85,8 +92,12 @@ func (res *User) Validate() error {
 	return nil
 }
 
-func (u *UserCreate) Mask(isAdminOrOwner bool) {
-	u.GenUID(common.DbTypeUser)
+func (u *UserCreate) Mask(hideID bool) {
+	if hideID {
+		u.GenUID(common.DbTypeUser)
+	} else if !hideID {
+		u.DeID()
+	}
 }
 
 type UserUpdate struct {
@@ -97,9 +108,16 @@ type UserUpdate struct {
 	LastName        string        `json:"last_name" gorm:"column:last_name;"`
 	Role            string        `json:"-" gorm:"column:role;"`
 	Salt            string        `json:"-" gorm:"column:salt;"`
+	Phone           string        `json:"phone" gorm:"column:phone;"`
+	Address         []Address     `json:"address" gorm:"column:address;type:jsonb"` // Using jsonb field
 	Avatar          *common.Image `json:"avatar,omitempty" gorm:"column:avatar;type:json"`
 }
 
+type Address struct {
+	Street string `json:"street"`
+	City   string `json:"city"`
+	State  string `json:"state"`
+}
 type UpdatePermission struct {
 	UpdateEmail string `json:"updateEmail" gorm:"-"`
 	RoleUpdate  string `json:"roleUpdate" gorm:"-"`

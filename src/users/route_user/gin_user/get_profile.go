@@ -1,6 +1,7 @@
 package gin_user
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -12,6 +13,7 @@ func GetProfile(appCtx app_context.Appcontext) gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		Data := c.MustGet(common.CurrentUser).(common.Requester)
+		fmt.Println("Data ID", Data)
 
 		c.JSON(http.StatusOK, common.SimpleSuccessResponse(Data))
 

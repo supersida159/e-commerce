@@ -7,6 +7,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/supersida159/e-commerce/pkg/app_context"
 	"github.com/supersida159/e-commerce/pkg/config"
+	"github.com/supersida159/e-commerce/src/order/route_order"
+	route_product "github.com/supersida159/e-commerce/src/product/route_product"
 	"github.com/supersida159/e-commerce/src/upload/route_upload"
 	"github.com/supersida159/e-commerce/src/users/route_user"
 )
@@ -32,6 +34,7 @@ func (s *Server) Run() error {
 	if err := s.MapRoutes(); err != nil {
 		log.Fatalf("MapRoutes Error: %v", err)
 	}
+
 	if err := s.engine.Run(fmt.Sprintf(":%d", s.appCtx.GetConfig().HttpPort)); err != nil {
 		log.Fatalf("Running HTTP server: %v", err)
 	}
@@ -39,13 +42,17 @@ func (s *Server) Run() error {
 
 }
 func (s Server) GetEngine() *gin.Engine {
+
 	return s.engine
 }
 func (s *Server) MapRoutes() error {
+
 	v1 := s.engine.Group("/api/v1")
+
 	route_user.Routes(v1.Group("/user"), s.appCtx)
 	route_upload.Routes(v1.Group("/upload"), s.appCtx)
-
+	route_product.Routes(v1.Group("/product"), s.appCtx)
+	route_order.Routes(v1.Group("/order"), s.appCtx)
 	return nil
 
 }

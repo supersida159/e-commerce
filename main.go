@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"github.com/supersida159/e-commerce/pkg/app_context"
 	"github.com/supersida159/e-commerce/pkg/config"
@@ -26,7 +27,7 @@ func main() {
 	}
 	err = db.AutoMigrate(&entities.User{}, &entities_product.Product{})
 	if err != nil {
-		logrus.Fatal(err)
+		logrus.Fatal(" Cannot connect to database to AutoMigrate", err)
 	}
 	cache := redis.NewRedis(redis.Config{
 		Address:  cfg.RedisURI,
@@ -40,8 +41,9 @@ func main() {
 	appctx := app_context.NewAppContext(db, pubsublocal.NewPubSub(), cache)
 
 	httpSvr := httpServer.NewServer(appctx)
+	httpSvr.GetEngine().Use(CORSMiddleware())
 	if err = httpSvr.Run(); err != nil {
-		logrus.Fatal(err)
+		logrus.Fatal(" Cannot runHttp server", err)
 	}
 
 	// run below code with Grpc
@@ -52,4 +54,19 @@ func main() {
 	// 		logrus.Fatal(err)
 	// 	}
 	// }()
+}
+func CORSMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT")
+		fmt.Print(c.Request.Method)
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+
+		c.Next()
+	}
 }

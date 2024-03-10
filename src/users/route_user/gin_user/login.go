@@ -17,10 +17,10 @@ import (
 func Login(appCtx app_context.Appcontext) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var LoginUserData entities.UserLogin
-		fmt.Println("parentSpanCtx:", c.Request.Context().Value("test_span"))
 		if err := c.ShouldBind(&LoginUserData); err != nil {
 			panic(common.ErrInvalidRequest(err))
 		}
+		fmt.Println("LoginUserData", LoginUserData)
 		db := appCtx.GetMainDBConnection()
 		tokenProvider := jwt.NewJwtProvider(appCtx.GetSecretKey())
 
@@ -31,7 +31,8 @@ func Login(appCtx app_context.Appcontext) gin.HandlerFunc {
 		acount, err := business.Login(c.Request.Context(), &LoginUserData)
 
 		if err != nil {
-			panic(err)
+			c.JSON(http.StatusBadRequest, common.ErrInvalidRequest(err))
+			return
 		}
 
 		c.JSON(http.StatusOK, common.SimpleSuccessResponse(acount))

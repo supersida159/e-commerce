@@ -7,13 +7,22 @@ import (
 	"fmt"
 )
 
+// type Image struct {
+// 	Id        int    `json:"id" gorm:"column:id;"`
+// 	Url       string `json:"url" gorm:"column:url"`
+// 	Width     int    `json:"width" gorm:"column:width"`
+// 	Height    int    `json:"height" gorm:"column:height"`
+// 	CloudName string `json:"cloud_name,omitempty" gorm:"column:clound_name"`
+// 	Extension string `json:"extension,omitempty" gorm:"column:extension"`
+// }
+
 type Image struct {
-	Id        int    `json:"id" gorm:"column:id;"`
-	Url       string `json:"url" gorm:"column:url"`
-	Width     int    `json:"width" gorm:"column:width"`
-	Height    int    `json:"height" gorm:"column:height"`
-	CloudName string `json:"cloud_name,omitempty" gorm:"column:clound_name"`
-	Extension string `json:"extension,omitempty" gorm:"column:extension"`
+	ID        int    `json:"id"`
+	Url       string `json:"url"`
+	Width     int    `json:"width"`
+	Height    int    `json:"height"`
+	CloudName string `json:"cloud_name"`
+	Extension string `json:"extension"`
 }
 
 func (j *Image) Scan(value interface{}) error {

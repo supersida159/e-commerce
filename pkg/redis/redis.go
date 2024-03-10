@@ -56,7 +56,7 @@ func NewRedis(config Config, realStore RealStore) *RedisWRealStore {
 
 	pong, err := rdb.Ping(ctx).Result()
 	if err != nil {
-		logrus.Fatal(pong, err)
+		logrus.Fatal("error at redis", pong, err)
 		return nil
 	}
 

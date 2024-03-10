@@ -30,7 +30,8 @@ func Register(appctx app_context.Appcontext) func(c *gin.Context) {
 			return
 		}
 
-		data.Mask(false)
-		c.JSON(http.StatusOK, common.SimpleSuccessResponse(data.FakeId.String()))
+		data.Mask(true)
+
+		c.JSON(http.StatusOK, common.SimpleSuccessResponse(data))
 	}
 }

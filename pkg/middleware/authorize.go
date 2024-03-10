@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
 	"github.com/supersida159/e-commerce/common"
 	"github.com/supersida159/e-commerce/pkg/app_context"
 	"github.com/supersida159/e-commerce/pkg/tokenprovider/jwt"
@@ -42,7 +41,7 @@ func RequireAuth(appCtx app_context.Appcontext) func(c *gin.Context) {
 		fmt.Println("Token:", c.GetHeader("Authorization"))
 		token, err := ExtractTokenFromHeaderString(c.GetHeader("Authorization"))
 		if err != nil {
-			logrus.Fatal(err)
+			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		}
 		payload, err := tokenProvider.Validate(token)
 		if err != nil {
