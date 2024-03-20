@@ -8,7 +8,7 @@ import (
 
 	goredis "github.com/go-redis/redis/v8"
 	"github.com/sirupsen/logrus"
-	"github.com/supersida159/e-commerce/src/users/entities"
+	"github.com/supersida159/e-commerce/src/users/entities_user"
 )
 
 const (
@@ -18,15 +18,15 @@ const (
 // IRedis interface
 //
 //go:generate mockery --name=IRedis
-type IRedis interface {
-	IsConnected() bool
-	Get(key string, value interface{}) error
-	Set(key string, value interface{}) error
-	SetWithExpiration(key string, value interface{}, expiration time.Duration) error
-	Remove(keys ...string) error
-	Keys(pattern string) ([]string, error)
-	RemovePattern(pattern string) error
-}
+// type IRedis interface {
+// 	IsConnected() bool
+// 	Get(key string, value interface{}) error
+// 	Set(key string, value interface{}) error
+// 	SetWithExpiration(key string, value interface{}, expiration time.Duration) error
+// 	Remove(keys ...string) error
+// 	Keys(pattern string) ([]string, error)
+// 	RemovePattern(pattern string) error
+// }
 
 // Config redis
 type Config struct {
@@ -36,11 +36,15 @@ type Config struct {
 }
 
 type RedisWRealStore struct {
-	cmd       goredis.Cmdable
+	Client    *goredis.Client
 	RealStore RealStore
 }
+
+type Client interface {
+	RunExpireOrder(ctx context.Context)
+}
 type RealStore interface {
-	FindUser(ctx context.Context, condition map[string]interface{}, moreInfores ...string) (*entities.User, error)
+	FindUser(ctx context.Context, condition map[string]interface{}, moreInfores ...string) (*entities_user.User, error)
 }
 
 // NewRedis Redis interface with config
@@ -61,13 +65,16 @@ func NewRedis(config Config, realStore RealStore) *RedisWRealStore {
 	}
 
 	return &RedisWRealStore{
-		cmd:       rdb,
+		Client:    rdb,
 		RealStore: realStore,
 	}
 }
-func (r *RedisWRealStore) FindUser(ctx context.Context, condition map[string]interface{}, moreInfores ...string) (*entities.User, error) {
+func (r *RedisWRealStore) GetClient() *goredis.Client {
+	return r.Client
+}
+func (r *RedisWRealStore) FindUser(ctx context.Context, condition map[string]interface{}, moreInfores ...string) (*entities_user.User, error) {
 	userID := condition["id"].(int)
-	var userInCache entities.User
+	var userInCache entities_user.User
 	err := r.Get(fmt.Sprintf("user-%d", userID), &userInCache)
 	if err != nil {
 		return &userInCache, nil
@@ -85,11 +92,11 @@ func (r *RedisWRealStore) IsConnected() bool {
 	ctx, cancel := context.WithTimeout(context.Background(), Timeout*time.Second)
 	defer cancel()
 
-	if r.cmd == nil {
+	if r.Client == nil {
 		return false
 	}
 
-	_, err := r.cmd.Ping(ctx).Result()
+	_, err := r.Client.Ping(ctx).Result()
 	if err != nil {
 		return false
 	}
@@ -100,7 +107,7 @@ func (r *RedisWRealStore) Get(key string, value interface{}) error {
 	ctx, cancel := context.WithTimeout(context.Background(), Timeout*time.Second)
 	defer cancel()
 
-	strValue, err := r.cmd.Get(ctx, key).Result()
+	strValue, err := r.Client.Get(ctx, key).Result()
 	if err != nil {
 		return err
 	}
@@ -118,7 +125,7 @@ func (r *RedisWRealStore) SetWithExpiration(key string, value interface{}, expir
 	defer cancel()
 
 	bData, _ := json.Marshal(value)
-	err := r.cmd.Set(ctx, key, bData, expiration).Err()
+	err := r.Client.Set(ctx, key, bData, expiration).Err()
 	if err != nil {
 		return err
 	}
@@ -131,7 +138,7 @@ func (r *RedisWRealStore) Set(key string, value interface{}) error {
 	defer cancel()
 
 	bData, _ := json.Marshal(value)
-	err := r.cmd.Set(ctx, key, bData, 0).Err()
+	err := r.Client.Set(ctx, key, bData, 0).Err()
 	if err != nil {
 		return err
 	}
@@ -143,7 +150,7 @@ func (r *RedisWRealStore) Remove(keys ...string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), Timeout*time.Second)
 	defer cancel()
 
-	err := r.cmd.Del(ctx, keys...).Err()
+	err := r.Client.Del(ctx, keys...).Err()
 	if err != nil {
 		return err
 	}
@@ -155,7 +162,7 @@ func (r *RedisWRealStore) Keys(pattern string) ([]string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), Timeout*time.Second)
 	defer cancel()
 
-	keys, err := r.cmd.Keys(ctx, pattern).Result()
+	keys, err := r.Client.Keys(ctx, pattern).Result()
 	if err != nil {
 		return nil, err
 	}

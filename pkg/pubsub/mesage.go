@@ -19,6 +19,13 @@ func NewMessage(data interface{}) *Message {
 		createAt: time.Now().UTC(),
 	}
 }
+func NewOrderMessage(id string, data interface{}) *Message {
+	return &Message{
+		Id:       id,
+		data:     &data,
+		createAt: time.Now().UTC(),
+	}
+}
 
 func (m *Message) String() string {
 	return fmt.Sprintf("Message{Id: %s, channel: %s, data: %v, createAt: %s}", m.Id, m.channel, m.data, m.createAt)

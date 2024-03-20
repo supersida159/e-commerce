@@ -1,6 +1,9 @@
 package ginproduct
 
 import (
+	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 
@@ -21,8 +24,22 @@ func ListProducts(appCtx app_context.Appcontext) func(c *gin.Context) {
 		store := repositoryproduct.NewSQLStore(appCtx.GetMainDBConnection())
 		biz := usecase_product.NewListProductsBiz(store)
 
+		// if err := c.ShouldBind(&reqData); err != nil {
+		// 	c.JSON(http.StatusBadRequest, common.ErrInvalidRequest(err))
+		// 	return
+		// }
+
 		if err := c.ShouldBind(&reqData); err != nil {
-			c.JSON(http.StatusBadRequest, common.ErrInvalidRequest(err))
+			// Check if the error is due to an empty form
+			if errors.Is(err, io.EOF) {
+				// Form is empty
+				// Handle the empty form case here
+				fmt.Println("Form is empty")
+			} else {
+				c.JSON(http.StatusBadRequest, common.ErrInvalidRequest(err))
+				return
+			}
+
 		}
 		paging.Limit, _ = strconv.Atoi(c.Query("limit"))
 		paging.Page, _ = strconv.Atoi(c.Query("page"))

@@ -10,7 +10,7 @@ import (
 )
 
 func Routes(r *gin.RouterGroup, appCtx app_context.Appcontext) {
-	r.POST("/list", gin_product.ListProducts(appCtx))
+	r.POST("/list", gin_order.ListOrders(appCtx))
 	r.GET("/getProduct/:id", gin_user.Login(appCtx))
 	// r.POST("/register", gin_user.Register(appCtx))
 	authRoute := r.Group("/Private", middleware.RequireAuth(appCtx))

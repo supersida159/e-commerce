@@ -5,12 +5,12 @@ import (
 
 	"github.com/supersida159/e-commerce/common"
 	"github.com/supersida159/e-commerce/pkg/app_context"
-	"github.com/supersida159/e-commerce/src/users/entities"
+	"github.com/supersida159/e-commerce/src/users/entities_user"
 )
 
 type RegisterStorage interface {
-	FindUser(ctx context.Context, conditions map[string]interface{}, moreInfo ...string) (*entities.User, error)
-	CreateUser(ctx context.Context, data *entities.UserCreate) error
+	FindUser(ctx context.Context, conditions map[string]interface{}, moreInfo ...string) (*entities_user.User, error)
+	CreateUser(ctx context.Context, data *entities_user.UserCreate) error
 }
 
 type RegisterBusiness struct {
@@ -27,11 +27,11 @@ func NewRegisterBusiness(appCtx app_context.Appcontext, storeUser RegisterStorag
 	}
 }
 
-func (b *RegisterBusiness) Register(ctx context.Context, data *entities.UserCreate) error {
+func (b *RegisterBusiness) Register(ctx context.Context, data *entities_user.UserCreate) error {
 
 	user, err := b.storeUser.FindUser(ctx, map[string]interface{}{"email": data.Email})
 	if user != nil {
-		return common.ErrEntityExisted(entities.UserRoloUser.String(), err)
+		return common.ErrEntityExisted(entities_user.UserRoloUser.String(), err)
 	}
 
 	salt := common.GenSalt(50)

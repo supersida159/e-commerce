@@ -8,9 +8,18 @@ import (
 	"github.com/supersida159/e-commerce/pkg/pubsub"
 )
 
+var TopicOrderCreated pubsub.Topic = "TopicOrderCreated"
+
+type OrderIdWithQuantity struct {
+	FakeID   string
+	OrderId  string
+	Quantity int
+}
+
 type localPubsub struct {
 	messagesQueue chan *pubsub.Message
 	mapChannels   map[pubsub.Topic][]chan *pubsub.Message
+	mapOrders     map[string]chan bool
 	locker        *sync.Mutex
 }
 
@@ -18,6 +27,7 @@ func NewPubSub() *localPubsub {
 	pb := &localPubsub{
 		messagesQueue: make(chan *pubsub.Message, 10000),
 		mapChannels:   make(map[pubsub.Topic][]chan *pubsub.Message),
+		mapOrders:     make(map[string]chan bool),
 		locker:        &sync.Mutex{},
 	}
 	pb.run()
@@ -25,12 +35,11 @@ func NewPubSub() *localPubsub {
 }
 
 func (pb *localPubsub) run() {
+
 	go func() {
 		for {
 			select {
 			case mess := <-pb.messagesQueue:
-				log.Println("new Publish event", mess.String())
-
 				if subs, ok := pb.mapChannels[mess.Channel()]; ok {
 					for _, sub := range subs {
 						func(c chan *pubsub.Message) {
@@ -42,6 +51,7 @@ func (pb *localPubsub) run() {
 
 		}
 	}()
+
 }
 
 func (pb *localPubsub) Publish(ctx context.Context, topic pubsub.Topic, data *pubsub.Message) error {

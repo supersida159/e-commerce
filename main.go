@@ -8,11 +8,13 @@ import (
 	"github.com/supersida159/e-commerce/pkg/app_context"
 	"github.com/supersida159/e-commerce/pkg/config"
 	dbs "github.com/supersida159/e-commerce/pkg/db"
+	"github.com/supersida159/e-commerce/pkg/goroutineinmain"
 	"github.com/supersida159/e-commerce/pkg/pubsub/pubsublocal"
 	"github.com/supersida159/e-commerce/pkg/redis"
+	entities_orders "github.com/supersida159/e-commerce/src/order/entities_order"
 	"github.com/supersida159/e-commerce/src/product/entities_product"
 	httpServer "github.com/supersida159/e-commerce/src/server"
-	"github.com/supersida159/e-commerce/src/users/entities"
+	"github.com/supersida159/e-commerce/src/users/entities_user"
 	"github.com/supersida159/e-commerce/src/users/repository_user"
 )
 
@@ -25,7 +27,7 @@ func main() {
 	if err != nil {
 		logrus.Fatal("Cannot connect to database", err)
 	}
-	err = db.AutoMigrate(&entities.User{}, &entities_product.Product{})
+	err = db.AutoMigrate(&entities_user.User{}, &entities_product.Product{}, &entities_orders.Order{})
 	if err != nil {
 		logrus.Fatal(" Cannot connect to database to AutoMigrate", err)
 	}
@@ -38,7 +40,13 @@ func main() {
 	)
 	connectRedis := cache.IsConnected()
 	fmt.Println("connect redis:", connectRedis)
-	appctx := app_context.NewAppContext(db, pubsublocal.NewPubSub(), cache)
+	localpubsub := pubsublocal.NewPubSub()
+	appctx := app_context.NewAppContext(db, localpubsub, cache)
+
+	err = goroutineinmain.RunExpireOrder(appctx)
+	if err != nil {
+		logrus.Fatal(" Cannot connect to database to AutoMigrate", err)
+	}
 
 	httpSvr := httpServer.NewServer(appctx)
 	httpSvr.GetEngine().Use(CORSMiddleware())

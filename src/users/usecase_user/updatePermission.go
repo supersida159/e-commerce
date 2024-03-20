@@ -5,12 +5,12 @@ import (
 
 	"github.com/supersida159/e-commerce/common"
 	"github.com/supersida159/e-commerce/pkg/app_context"
-	"github.com/supersida159/e-commerce/src/users/entities"
+	"github.com/supersida159/e-commerce/src/users/entities_user"
 )
 
 type UpdatePermissionStorage interface {
-	FindUser(ctx context.Context, conditions map[string]interface{}, moreInfo ...string) (*entities.User, error)
-	UpdateUserAddmin(ctx context.Context, data *entities.UserUpdate) error
+	FindUser(ctx context.Context, conditions map[string]interface{}, moreInfo ...string) (*entities_user.User, error)
+	UpdateUserAddmin(ctx context.Context, data *entities_user.UserUpdate) error
 }
 
 type updatePermissionBusiness struct {
@@ -27,7 +27,7 @@ func NewUpdatePermissionBusiness(appCtx app_context.Appcontext, storeUser Update
 	}
 }
 
-func (b *updatePermissionBusiness) UpdateUserPermission(ctx context.Context, data *entities.UserUpdate) error {
+func (b *updatePermissionBusiness) UpdateUserPermission(ctx context.Context, data *entities_user.UserUpdate) error {
 	if err := b.storeUser.UpdateUserAddmin(ctx, data); err != nil {
 		return common.ErrDB(err)
 	}

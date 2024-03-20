@@ -11,11 +11,11 @@ import (
 	"github.com/supersida159/e-commerce/common"
 	"github.com/supersida159/e-commerce/pkg/app_context"
 	"github.com/supersida159/e-commerce/pkg/tokenprovider/jwt"
-	"github.com/supersida159/e-commerce/src/users/entities"
+	"github.com/supersida159/e-commerce/src/users/entities_user"
 )
 
 type AuthenStore interface {
-	FindUser(ctx context.Context, conditions map[string]interface{}, moreInfo ...string) (*entities.User, error)
+	FindUser(ctx context.Context, conditions map[string]interface{}, moreInfo ...string) (*entities_user.User, error)
 }
 
 func ErrInvalidToken() *common.AppError {

@@ -1,34 +1,44 @@
 package gin_order
 
 import (
+	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/supersida159/e-commerce/common"
 	"github.com/supersida159/e-commerce/pkg/app_context"
-	"github.com/supersida159/e-commerce/src/product/entities_product"
-	repositoryproduct "github.com/supersida159/e-commerce/src/product/repository_product"
-	"github.com/supersida159/e-commerce/src/product/usecase_product"
+	entities_orders "github.com/supersida159/e-commerce/src/order/entities_order"
+	"github.com/supersida159/e-commerce/src/order/repository_orders"
+	usecase_orders "github.com/supersida159/e-commerce/src/order/usecase_order"
 )
 
-func ListProducts(appCtx app_context.Appcontext) func(c *gin.Context) {
+func ListOrders(appCtx app_context.Appcontext) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		var reqData entities_product.ListProductReq
-		var resData []entities_product.ListProductRes
+		var reqData entities_orders.ListOrderReq
+		var resData []entities_orders.Order
 		var paging common.Paging
 
-		store := repositoryproduct.NewSQLStore(appCtx.GetMainDBConnection())
-		biz := usecase_product.NewListProductsBiz(store)
+		store := repository_orders.NewSQLStore(appCtx.GetMainDBConnection())
+		biz := usecase_orders.NewListOrdersBiz(store)
 
 		if err := c.ShouldBind(&reqData); err != nil {
-			c.JSON(http.StatusBadRequest, common.ErrInvalidRequest(err))
+			if errors.Is(err, io.EOF) {
+				// Form is empty
+				// Handle the empty form case here
+				fmt.Println("Form is empty")
+			} else {
+				c.JSON(http.StatusBadRequest, common.ErrInvalidRequest(err))
+				return
+			}
 		}
 		paging.Limit, _ = strconv.Atoi(c.Query("limit"))
 		paging.Page, _ = strconv.Atoi(c.Query("page"))
 		paging.FakeCusor = c.Query("cursor")
 		paging.Fullfill()
-		resData, err := biz.ListProductsBiz(c.Request.Context(), &reqData, &paging)
+		resData, err := biz.ListOrdersBiz(c.Request.Context(), &reqData, &paging)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, err)
 			return

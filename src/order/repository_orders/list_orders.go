@@ -5,10 +5,12 @@ import (
 
 	"github.com/supersida159/e-commerce/common"
 	entities_orders "github.com/supersida159/e-commerce/src/order/entities_order"
+	"gorm.io/gorm"
 )
 
 func (s *sqlStore) ListOrders(ctx context.Context,
 	conditions map[string]interface{},
+	fillter *entities_orders.ListOrderReq,
 	paging *common.Paging,
 	moreInfo ...string,
 ) ([]entities_orders.Order, error) {
@@ -19,6 +21,7 @@ func (s *sqlStore) ListOrders(ctx context.Context,
 	for _, info := range moreInfo {
 		db = db.Preload(info)
 	}
+	db = buildQuery(db, fillter)
 
 	// Find total count
 	if err := db.Count(&paging.Total).Error; err != nil {
@@ -45,4 +48,23 @@ func (s *sqlStore) ListOrders(ctx context.Context,
 	}
 
 	return result, nil
+}
+
+func buildQuery(db *gorm.DB, filter *entities_orders.ListOrderReq) *gorm.DB {
+	if filter.CustomerName != "" {
+		db = db.Where("customer_name = ?", filter.CustomerName)
+	}
+	if filter.CustomerPhone != "" {
+		db = db.Where("customer_phone = ?", filter.CustomerPhone)
+	}
+	if filter.Status != 0 {
+		db = db.Where("status = ?", filter.Status)
+	}
+	if filter.OrderCancelled {
+		db = db.Where("order_cancelled = ?", filter.OrderCancelled)
+	}
+	if filter.CreatedAt != nil {
+		db = db.Where("created_at > ?", filter.CreatedAt)
+	}
+	return db
 }

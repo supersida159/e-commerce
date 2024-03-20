@@ -7,11 +7,11 @@ import (
 	"github.com/supersida159/e-commerce/common"
 	"github.com/supersida159/e-commerce/pkg/app_context"
 	"github.com/supersida159/e-commerce/pkg/tokenprovider"
-	"github.com/supersida159/e-commerce/src/users/entities"
+	"github.com/supersida159/e-commerce/src/users/entities_user"
 )
 
 type LoginStorage interface {
-	FindUser(ctx context.Context, conditions map[string]interface{}, moreInfo ...string) (*entities.User, error)
+	FindUser(ctx context.Context, conditions map[string]interface{}, moreInfo ...string) (*entities_user.User, error)
 }
 
 type TokenCfg interface {
@@ -40,13 +40,13 @@ func NewLoginBusiness(appCtx app_context.Appcontext, storeUser LoginStorage, tok
 	}
 }
 
-func (b *LoginBusiness) Login(ctx context.Context, data *entities.UserLogin) (*entities.Account, error) {
+func (b *LoginBusiness) Login(ctx context.Context, data *entities_user.UserLogin) (*entities_user.Account, error) {
 	user, err := b.storeUser.FindUser(ctx, map[string]interface{}{"email": data.Email})
 
 	fmt.Println("data", data)
 
 	if err != nil {
-		return nil, common.ErrCannotGetEntity(entities.UserRoloUser.String(), err)
+		return nil, common.ErrCannotGetEntity(entities_user.UserRoloUser.String(), err)
 	}
 
 	passHash := b.hasher.Hash(data.Password + user.Salt)
@@ -67,6 +67,6 @@ func (b *LoginBusiness) Login(ctx context.Context, data *entities.UserLogin) (*e
 	if err != nil {
 		return nil, common.ErrInternal(err)
 	}
-	account := entities.NewAccount(accessToken, refreshToken)
+	account := entities_user.NewAccount(accessToken, refreshToken)
 	return account, nil
 }

@@ -11,7 +11,7 @@ type Product struct {
 	Description     string         `json:"description" gorm:"column:description"`
 	Name            string         `json:"name" gorm:"uniqueIndex:idx_product_name(255),not null;column:name;type:varchar(255)"`
 	Code            string         `json:"code" gorm:"uniqueIndex:idx_product_code(255),not null;column:code;type:varchar(255)"`
-	Price           string         `json:"price" gorm:"not null;type:varchar(255)"`
+	Price           string         `json:"price" gorm:"column:price;not null"`
 	Active          *bool          `json:"active" gorm:"default:true"`
 	Quantity        int            `json:"quantity" gorm:"column:quantity;not null"`
 	ProductImages   *ProductImages `json:"images" gorm:"column:product_image;type:json"`
@@ -91,6 +91,7 @@ type ListProductRes struct {
 	Category        string         `json:"category,omitempty" form:"category"`
 	ProductImages   *ProductImages `json:"images" gorm:"column:product_image;type:json"`
 	Active          *bool          `json:"active" gorm:"default:true"`
+	Price           string         `json:"price" gorm:"not null;type:varchar(255)"`
 	Brand           string         `json:"brand,omitempty" form:"brand"`
 	Quantity        int            `json:"quantity" gorm:"column:quantity;not null"`
 	Sale            int            `json:"sale" gorm:"column:sale;not null"`

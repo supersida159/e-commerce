@@ -5,12 +5,12 @@ import (
 
 	"github.com/supersida159/e-commerce/common"
 	"github.com/supersida159/e-commerce/pkg/app_context"
-	"github.com/supersida159/e-commerce/src/users/entities"
+	"github.com/supersida159/e-commerce/src/users/entities_user"
 )
 
 type UpdateStorage interface {
-	FindUser(ctx context.Context, conditions map[string]interface{}, moreInfo ...string) (*entities.User, error)
-	UpdateUser(ctx context.Context, data *entities.UserUpdate) error
+	FindUser(ctx context.Context, conditions map[string]interface{}, moreInfo ...string) (*entities_user.User, error)
+	UpdateUser(ctx context.Context, data *entities_user.UserUpdate) error
 }
 
 type UpdateBusiness struct {
@@ -27,7 +27,7 @@ func NewUpdateBusiness(appCtx app_context.Appcontext, storeUser UpdateStorage, h
 	}
 }
 
-func (b *UpdateBusiness) UpdateUser(ctx context.Context, data *entities.UserUpdate) error {
+func (b *UpdateBusiness) UpdateUser(ctx context.Context, data *entities_user.UserUpdate) error {
 	if data.Password != "" {
 		salt := common.GenSalt(50)
 		data.Password = b.hasher.Hash(data.Password + salt)

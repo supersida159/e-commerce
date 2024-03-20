@@ -9,14 +9,14 @@ import (
 	"github.com/supersida159/e-commerce/pkg/app_context"
 	"github.com/supersida159/e-commerce/pkg/hasher"
 	"github.com/supersida159/e-commerce/pkg/tokenprovider/jwt"
-	"github.com/supersida159/e-commerce/src/users/entities"
+	"github.com/supersida159/e-commerce/src/users/entities_user"
 	"github.com/supersida159/e-commerce/src/users/repository_user"
 	"github.com/supersida159/e-commerce/src/users/usecase_user"
 )
 
 func Login(appCtx app_context.Appcontext) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var LoginUserData entities.UserLogin
+		var LoginUserData entities_user.UserLogin
 		if err := c.ShouldBind(&LoginUserData); err != nil {
 			panic(common.ErrInvalidRequest(err))
 		}

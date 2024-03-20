@@ -18,6 +18,9 @@ type Server struct {
 	engine *gin.Engine
 }
 
+func (s Server) GetAppContext() app_context.Appcontext {
+	return s.appCtx
+}
 func NewServer(appCtx app_context.Appcontext) *Server {
 	return &Server{
 		appCtx: appCtx,

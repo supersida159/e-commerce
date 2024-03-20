@@ -1,5 +1,7 @@
 package common
 
+import "time"
+
 const (
 	DbTypeRestaurant = 1
 	DbTypeFood       = 2
@@ -9,7 +11,8 @@ const (
 	DbTypeOrder      = 6
 )
 const (
-	CurrentUser = "user"
+	CurrentUser     = "user"
+	ExpireOrderTime = 20 * time.Second
 )
 
 type Requester interface {

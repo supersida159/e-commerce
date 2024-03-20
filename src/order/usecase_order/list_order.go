@@ -8,8 +8,9 @@ import (
 )
 
 type ListOrdersStore interface {
-	ListOrder(ctx context.Context,
+	ListOrders(ctx context.Context,
 		conditions map[string]interface{},
+		filter *entities_orders.ListOrderReq,
 		paging *common.Paging,
 		moreInfo ...string,
 	) ([]entities_orders.Order, error)
@@ -25,8 +26,8 @@ func NewListOrdersBiz(store ListOrdersStore) *listOrdersBiz {
 	}
 }
 
-func (biz *listOrdersBiz) ListOrdersBiz(ctx context.Context, paging *common.Paging) ([]entities_orders.Order, error) {
-	results, err := biz.store.ListOrder(ctx, nil, paging)
+func (biz *listOrdersBiz) ListOrdersBiz(ctx context.Context, fillter *entities_orders.ListOrderReq, paging *common.Paging) ([]entities_orders.Order, error) {
+	results, err := biz.store.ListOrders(ctx, nil, fillter, paging)
 	if err != nil {
 		return nil, common.ErrCannotListEntity(entities_orders.EntityName, err)
 	}

@@ -7,7 +7,7 @@ import (
 	"github.com/supersida159/e-commerce/common"
 	"github.com/supersida159/e-commerce/pkg/app_context"
 	"github.com/supersida159/e-commerce/pkg/hasher"
-	"github.com/supersida159/e-commerce/src/users/entities"
+	"github.com/supersida159/e-commerce/src/users/entities_user"
 	"github.com/supersida159/e-commerce/src/users/repository_user"
 	"github.com/supersida159/e-commerce/src/users/usecase_user"
 )
@@ -16,8 +16,8 @@ func AddUpdateAddmin(appctx app_context.Appcontext) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		db := appctx.GetMainDBConnection()
 
-		var data entities.UpdatePermission
-		var updateUser entities.UserUpdate
+		var data entities_user.UpdatePermission
+		var updateUser entities_user.UserUpdate
 		if err := c.ShouldBind(&data); err != nil {
 			c.JSON(http.StatusBadRequest, common.ErrInvalidRequest(err))
 			return

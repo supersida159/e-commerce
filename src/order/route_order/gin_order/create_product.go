@@ -6,9 +6,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/supersida159/e-commerce/common"
 	"github.com/supersida159/e-commerce/pkg/app_context"
-	usecase_orders "github.com/supersida159/e-commerce/src/Order/usecase_order"
 	entities_orders "github.com/supersida159/e-commerce/src/order/entities_order"
 	"github.com/supersida159/e-commerce/src/order/repository_orders"
+	usecase_orders "github.com/supersida159/e-commerce/src/order/usecase_order"
 )
 
 func CreateOrderHandler(appCtx app_context.Appcontext) func(c *gin.Context) {
@@ -20,7 +20,7 @@ func CreateOrderHandler(appCtx app_context.Appcontext) func(c *gin.Context) {
 		userContext := c.MustGet(common.CurrentUser).(common.Requester)
 
 		store := repository_orders.NewSQLStore(appCtx.GetMainDBConnection())
-		biz := usecase_orders.NewCreateOrderBiz(store)
+		biz := usecase_orders.NewCreateOrderBiz(store, appCtx.GetPubSub(), *appCtx.GetCache())
 
 		if err := c.ShouldBind(&reqData); err != nil {
 			c.JSON(http.StatusBadRequest, common.ErrInvalidRequest(err))
@@ -33,7 +33,7 @@ func CreateOrderHandler(appCtx app_context.Appcontext) func(c *gin.Context) {
 		data = ConvertPlaceOrderReqToOrder(reqData)
 		data.UserOrderID = userContext.GetUserID()
 		data.GetOrderTotal()
-		data.Mask(true)
+
 		if err := biz.CreateOrderBiz(c.Request.Context(), &data); err != nil {
 			c.JSON(http.StatusBadRequest, err)
 			return
