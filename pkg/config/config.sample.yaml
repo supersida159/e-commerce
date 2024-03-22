@@ -12,8 +12,4 @@ redis_db: 0
 SecretKey: Golang Course
 
 
-s3BucketName: g04.images
-s3Region : ap-southeast-1
-s3APIKey : AKIA6QXOKIY5FL53D7V5
-s3SecretKey : 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
-s3Domain : https://food-delivery.s3.amazonaws.com
+
