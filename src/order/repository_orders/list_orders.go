@@ -66,5 +66,11 @@ func buildQuery(db *gorm.DB, filter *entities_orders.ListOrderReq) *gorm.DB {
 	if filter.CreatedAt != nil {
 		db = db.Where("created_at > ?", filter.CreatedAt)
 	}
+	if filter.UpdatedAt != nil {
+		db = db.Where("updated_at > ?", filter.UpdatedAt)
+	}
+	if filter.ID != 0 {
+		db = db.Where("id = ?", filter.ID)
+	}
 	return db
 }

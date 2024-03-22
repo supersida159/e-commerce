@@ -81,7 +81,7 @@ func (o *Order) GetOrderTotal() float64 {
 	totalOrder := o.Shipping.Cost
 	for _, product := range o.Products {
 		productCost, _ := strconv.ParseFloat(product.Product.Price, 64)
-		totalOrder += productCost
+		totalOrder += productCost * float64(product.Quantity)
 	}
 	// rounded := math.Round(totalOrder*100) / 100
 
@@ -208,4 +208,12 @@ type ListOrderReq struct {
 	OrderCancelled  bool             `json:"orderCancelled"`
 	CustomerName    string           `json:"customerName"`
 	CustomerPhone   string           `json:"customerPhone"`
+}
+
+func (o *ListOrderReq) Mask(hideID bool) {
+	if hideID {
+		o.GenUID(common.DbTypeOrder)
+	} else if !hideID {
+		o.DeID()
+	}
 }
