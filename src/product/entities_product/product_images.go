@@ -15,26 +15,24 @@ type ProductImage struct {
 	Image     *common.Image `json:"image"`
 }
 
-type ProductImages []ProductImage
-
-func (j *ProductImages) TableName() string {
+func (j *ProductImage) TableName() string {
 	return "images"
 }
 
-func (j *ProductImages) Scan(value interface{}) error {
+func (j *ProductImage) Scan(value interface{}) error {
 	bytes, ok := value.([]byte)
 	if !ok {
 		return errors.New(fmt.Sprint("Failed to unmarshal JSONB value:", value))
 	}
 
-	var img ProductImages
+	var img ProductImage
 	if err := json.Unmarshal(bytes, &img); err != nil {
 		return err
 	}
 	*j = img
 	return nil
 }
-func (j *ProductImages) Value() (driver.Value, error) {
+func (j *ProductImage) Value() (driver.Value, error) {
 	if j == nil {
 		return nil, nil
 	}

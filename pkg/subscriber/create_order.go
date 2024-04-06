@@ -1,15 +1,5 @@
 package subscriber
 
-// import (
-// 	"context"
-
-// 	"github.com/supersida159/learningGO/common"
-// 	"github.com/supersida159/learningGO/component"
-// 	"github.com/supersida159/learningGO/modules/restaurant/restaurantstore"
-// 	"github.com/supersida159/learningGO/pubsub"
-// 	"github.com/supersida159/learningGO/skio"
-// )
-
 // type HashRestaurantID interface {
 // 	GetRestaurantID() int
 // 	GetUserID() int
@@ -31,9 +21,9 @@ package subscriber
 // 	return nil
 // }
 
-// func RunIncreaseLikeCountAfterUserLikeRestaurant(appCtx component.Appcontext) consumerJob {
+// func RunDeleteCartAfterOrder(appCtx component.Appcontext) consumerJob {
 // 	return consumerJob{
-// 		Title: "IncreaseLikeCountAfterUserLikeRestaurant",
+// 		Title: "RunDeleteCartAfterOrder",
 // 		Hld: func(ctx context.Context, msg *pubsub.Message) error {
 // 			store := restaurantstore.NewSQLStore(appCtx.GetMainDBConnection())
 // 			likedata := msg.Data().(HashRestaurantID)
@@ -47,7 +37,7 @@ package subscriber
 // func EmitIncreaseLikeCountAfterUserLikeRestaurant(
 // 	engine skio.RealTimeEngine) consumerJob {
 // 	return consumerJob{
-// 		Title: "IncreaseLikeCountAfterUserLikeRestaurant",
+// 		Title: "RunDeleteCartAfterOrder",
 // 		Hld: func(ctx context.Context, msg *pubsub.Message) error {
 // 			likedata := msg.Data().(HashRestaurantID)
 // 			return engine.EmitToUser(likedata.GetUserID(), string(msg.Channel()), likedata)

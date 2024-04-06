@@ -34,8 +34,9 @@ type Order struct {
 }
 
 type ProductQuantity struct {
-	Product  entities_product.Product `json:"product"`
-	Quantity int                      `json:"quantity"`
+	ProductID string                   `json:"product_id" gorm:"column:id;ForeignKey:id"` // Foreign key for Product
+	Product   entities_product.Product `json:"product"`
+	Quantity  int                      `json:"quantity" gorm:"column:quantity"`
 }
 type ProductQuantityList []*ProductQuantity
 
@@ -161,12 +162,16 @@ func (s *ShippingInfo) Scan(value interface{}) error {
 }
 
 type PlaceOrderReq struct {
-	CustomerName  string             `gorm:"column:customer_name" json:"customer_name"`
-	CustomerPhone string             `gorm:"column:customer_phone" json:"customer_phone"`
-	Products      []*ProductQuantity `gorm:"embedded" json:"products"`
-	Notes         string             `json:"notes" gorm:"column:notes"`
-	Shipping      ShippingInfo       `gorm:"embedded" json:"shipping"`
-	Address       Address            `json:"address" gorm:"column:address;type:json"`
+	CustomerName  string                `gorm:"column:customer_name" json:"customer_name"`
+	CustomerPhone string                `gorm:"column:customer_phone" json:"customer_phone"`
+	Products      []*ProductQuantityReq `gorm:"embedded" json:"products"`
+	Notes         string                `json:"notes" gorm:"column:notes"`
+	Shipping      ShippingInfo          `gorm:"embedded" json:"shipping"`
+	Address       Address               `json:"address" gorm:"column:address;type:json"`
+}
+type ProductQuantityReq struct {
+	ProductID string `json:"product_id"`
+	Quantity  int    `json:"quantity"`
 }
 
 func (o Order) TableName() string {

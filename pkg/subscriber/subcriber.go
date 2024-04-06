@@ -4,11 +4,6 @@ package subscriber
 // 	"context"
 // 	"log"
 
-// 	"github.com/supersida159/learningGO/common"
-// 	"github.com/supersida159/learningGO/component"
-// 	"github.com/supersida159/learningGO/component/asyncjob"
-// 	"github.com/supersida159/learningGO/pubsub"
-// 	"github.com/supersida159/learningGO/skio"
 // )
 
 // type consumerJob struct {

@@ -8,16 +8,16 @@ const (
 
 type Product struct {
 	common.SQLModel `json:",inline"`
-	Description     string         `json:"description" gorm:"column:description"`
-	Name            string         `json:"name" gorm:"uniqueIndex:idx_product_name(255),not null;column:name;type:varchar(255)"`
-	Code            string         `json:"code" gorm:"uniqueIndex:idx_product_code(255),not null;column:code;type:varchar(255)"`
-	Price           string         `json:"price" gorm:"column:price;not null"`
-	Active          *bool          `json:"active" gorm:"default:true"`
-	Quantity        int            `json:"quantity" gorm:"column:quantity;not null"`
-	ProductImages   *ProductImages `json:"images" gorm:"column:product_image;type:json"`
-	Category        string         `json:"category" gorm:"-"`
-	Brand           string         `json:"brand" gorm:"column:brand;type:varchar(255)"`
-	Sale            int            `json:"sale" gorm:"column:sale;not null;default:0"`
+	Description     string        `json:"description" gorm:"column:description"`
+	Name            string        `json:"name" gorm:"Index:idx_product_name(255),not null;column:name;type:varchar(255)"`
+	Code            string        `json:"code" gorm:"uniqueIndex:idx_product_code(255),not null;column:code;type:varchar(255)"`
+	Price           string        `json:"price" gorm:"column:price;not null"`
+	Active          *bool         `json:"active" gorm:"default:true"`
+	Quantity        int           `json:"quantity" gorm:"column:quantity;not null"`
+	ProductImages   *ProductImage `json:"images" gorm:"column:product_image;type:json"`
+	Category        string        `json:"category" gorm:"column:category;type:varchar(255)"`
+	Brand           string        `json:"brand" gorm:"column:brand;type:varchar(255)"`
+	Sale            int           `json:"sale" gorm:"column:sale;not null;default:0"`
 }
 
 func (p Product) TableName() string {
@@ -52,9 +52,9 @@ func (p *Product) GetDescription() string {
 	return p.Description
 }
 
-func (p *Product) GetProductImage() *ProductImages {
-	return p.ProductImages
-}
+// func (p *Product) GetProductImage() *ProductImage {
+// 	return p.ProductImage
+// }
 
 func (p *Product) Mask(hideID bool) {
 	if hideID {
@@ -86,15 +86,15 @@ func (p *ListProductReq) Mask(hideID bool) {
 
 type ListProductRes struct {
 	common.SQLModel `json:",inline"`
-	Name            string         `json:"name,omitempty" form:"name"`
-	Code            string         `json:"code,omitempty" form:"code"`
-	Category        string         `json:"category,omitempty" form:"category"`
-	ProductImages   *ProductImages `json:"images" gorm:"column:product_image;type:json"`
-	Active          *bool          `json:"active" gorm:"default:true"`
-	Price           string         `json:"price" gorm:"not null;type:varchar(255)"`
-	Brand           string         `json:"brand,omitempty" form:"brand"`
-	Quantity        int            `json:"quantity" gorm:"column:quantity;not null"`
-	Sale            int            `json:"sale" gorm:"column:sale;not null"`
+	Name            string        `json:"name,omitempty" form:"name"`
+	Code            string        `json:"code,omitempty" form:"code"`
+	Category        string        `json:"category,omitempty" form:"category"`
+	ProductImages   *ProductImage `json:"images" gorm:"column:product_image;type:json"`
+	Active          *bool         `json:"active" gorm:"default:true"`
+	Price           string        `json:"price" gorm:"not null;type:varchar(255)"`
+	Brand           string        `json:"brand,omitempty" form:"brand"`
+	Quantity        int           `json:"quantity" gorm:"column:quantity;not null"`
+	Sale            int           `json:"sale" gorm:"column:sale;not null"`
 }
 
 func (p *ListProductRes) Mask(hideID bool) {

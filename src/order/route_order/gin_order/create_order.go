@@ -32,12 +32,12 @@ func CreateOrderHandler(appCtx app_context.Appcontext) func(c *gin.Context) {
 		}
 		data = ConvertPlaceOrderReqToOrder(reqData)
 		data.UserOrderID = userContext.GetUserID()
-		data.GetOrderTotal()
 
 		if err := biz.CreateOrderBiz(c.Request.Context(), &data); err != nil {
 			c.JSON(http.StatusBadRequest, err)
 			return
 		}
+
 		data.Mask(true)
 		c.JSON(http.StatusOK, common.SimpleSuccessResponse(data))
 	}
@@ -49,12 +49,19 @@ func ConvertPlaceOrderReqToOrder(placeOrderReq entities_orders.PlaceOrderReq) en
 		UserOrderID:    0,
 		CustomerName:   placeOrderReq.CustomerName,
 		CustomerPhone:  placeOrderReq.CustomerPhone,
-		Products:       placeOrderReq.Products,
 		Shipping:       placeOrderReq.Shipping, // Add appropriate initialization or mapping
 		OrderTotal:     0.0,                    // Add appropriate initialization or mapping
 		Notes:          placeOrderReq.Notes,
 		Address:        placeOrderReq.Address,
 		OrderCancelled: false, // Add appropriate initialization or mapping
+	}
+	for _, p := range placeOrderReq.Products {
+
+		order.Products = append(order.Products, &entities_orders.ProductQuantity{
+			ProductID: p.ProductID,
+
+			Quantity: p.Quantity,
+		})
 	}
 
 	// Add any additional mapping or initialization logic for new fields

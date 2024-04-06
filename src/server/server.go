@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/supersida159/e-commerce/pkg/app_context"
 	"github.com/supersida159/e-commerce/pkg/config"
+	"github.com/supersida159/e-commerce/src/cart/route_cart"
 	"github.com/supersida159/e-commerce/src/order/route_order"
 	route_product "github.com/supersida159/e-commerce/src/product/route_product"
 	"github.com/supersida159/e-commerce/src/upload/route_upload"
@@ -56,6 +57,7 @@ func (s *Server) MapRoutes() error {
 	route_upload.Routes(v1.Group("/upload"), s.appCtx)
 	route_product.Routes(v1.Group("/product"), s.appCtx)
 	route_order.Routes(v1.Group("/order"), s.appCtx)
+	route_cart.Routes(v1.Group("/cart"), s.appCtx)
 	return nil
 
 }

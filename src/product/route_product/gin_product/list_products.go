@@ -44,6 +44,7 @@ func ListProducts(appCtx app_context.Appcontext) func(c *gin.Context) {
 		paging.Limit, _ = strconv.Atoi(c.Query("limit"))
 		paging.Page, _ = strconv.Atoi(c.Query("page"))
 		paging.FakeCusor = c.Query("cursor")
+
 		paging.Fullfill()
 		resData, err := biz.ListProductsBiz(c.Request.Context(), &reqData, &paging)
 		if err != nil {

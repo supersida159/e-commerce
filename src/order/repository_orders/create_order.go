@@ -11,19 +11,35 @@ import (
 
 func (s *sqlStore) CreateOrder(ctx context.Context, data *entities_orders.Order) error {
 	db := s.db.Begin()
-	//check and update quantity product
-	for _, itemindb := range data.Products {
-		var item entities_product.Product
-		if err := db.Table("products").Where("name = ?", itemindb.Product.Name).First(&item).Error; err != nil {
+	for index, product := range data.Products {
+		uid, _ := common.FromBase58(product.ProductID)
+		productID := uid.GetLocalID()
+		err := db.Table("products").Where("id = ?", productID).First(&data.Products[index].Product).Error
+		if err != nil {
 			return common.ErrDB(err)
 		}
-		if item.Quantity > itemindb.Quantity {
-			if err := db.Table("products").Where("name = ?", itemindb.Product.Name).Update("quantity", item.Quantity-itemindb.Quantity).Error; err != nil {
+		if data.Products[index].Product.Quantity > data.Products[index].Quantity {
+			if err := db.Table("products").Where("id = ?", productID).Update("quantity", data.Products[index].Product.Quantity-data.Products[index].Quantity).Error; err != nil {
 				return common.ErrDB(err)
 			}
 		}
 	}
+	//check and update quantity product
+	// for _, itemindb := range data.Products {
+	// 	var item entities_product.Product
+	// 	if err := db.Table("products").Where("name = ?", itemindb.Product.Name).First(&item).Error; err != nil {
+	// 		return common.ErrDB(err)
+	// 	}
+	// 	if item.Quantity > itemindb.Quantity {
+	// 		if err := db.Table("products").Where("name = ?", itemindb.Product.Name).Update("quantity", item.Quantity-itemindb.Quantity).Error; err != nil {
+	// 			return common.ErrDB(err)
+	// 		}
+	// 	}
+	// }
+	//get total
+	data.GetOrderTotal()
 	//create an order
+
 	if err := db.Table("orders").Create(&data).Error; err != nil {
 		db.Rollback()
 		return common.ErrDB(err)

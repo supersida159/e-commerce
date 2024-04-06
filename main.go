@@ -11,6 +11,7 @@ import (
 	"github.com/supersida159/e-commerce/pkg/goroutineinmain"
 	"github.com/supersida159/e-commerce/pkg/pubsub/pubsublocal"
 	"github.com/supersida159/e-commerce/pkg/redis"
+	entities_carts "github.com/supersida159/e-commerce/src/cart/entities_cart"
 	entities_orders "github.com/supersida159/e-commerce/src/order/entities_order"
 	"github.com/supersida159/e-commerce/src/product/entities_product"
 	httpServer "github.com/supersida159/e-commerce/src/server"
@@ -27,7 +28,7 @@ func main() {
 	if err != nil {
 		logrus.Fatal("Cannot connect to database", err)
 	}
-	err = db.AutoMigrate(&entities_user.User{}, &entities_product.Product{}, &entities_orders.Order{})
+	err = db.AutoMigrate(&entities_user.User{}, &entities_product.Product{}, &entities_orders.Order{}, &entities_carts.Cart{})
 	if err != nil {
 		logrus.Fatal(" Cannot connect to database to AutoMigrate", err)
 	}
