@@ -29,7 +29,7 @@ type User struct {
 	Role            string        `json:"role" gorm:"column:role;"`
 	Salt            string        `json:"-" gorm:"column:salt;"`
 	Phone           string        `json:"phone" gorm:"column:phone;"`
-	Address         []Address     `json:"address" gorm:"column:address;type:jsonb"` // Using jsonb field
+	Address         []Address     `json:"address" gorm:"column:address;type:json"` // Using jsonb field
 	Avatar          *common.Image `json:"avatar,omitempty" gorm:"column:avatar;type:json"`
 }
 

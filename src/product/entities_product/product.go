@@ -91,7 +91,7 @@ type ListProductRes struct {
 	Category        string        `json:"category,omitempty" form:"category"`
 	ProductImages   *ProductImage `json:"images" gorm:"column:product_image;type:json"`
 	Active          *bool         `json:"active" gorm:"default:true"`
-	Price           string        `json:"price" gorm:"not null;type:varchar(255)"`
+	Price           string        `json:"price" gorm:"not null"`
 	Brand           string        `json:"brand,omitempty" form:"brand"`
 	Quantity        int           `json:"quantity" gorm:"column:quantity;not null"`
 	Sale            int           `json:"sale" gorm:"column:sale;not null"`
