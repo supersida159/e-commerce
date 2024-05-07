@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
+	"github.com/supersida159/e-commerce/common"
 	"github.com/supersida159/e-commerce/pkg/app_context"
 	"github.com/supersida159/e-commerce/pkg/config"
 	dbs "github.com/supersida159/e-commerce/pkg/db"
@@ -28,7 +29,7 @@ func main() {
 	if err != nil {
 		logrus.Fatal("Cannot connect to database", err)
 	}
-	err = db.AutoMigrate(&entities_user.User{}, &entities_product.Product{}, &entities_orders.Order{}, &entities_carts.Cart{})
+	err = db.AutoMigrate(&entities_user.User{}, &entities_product.Product{}, &entities_orders.Order{}, &entities_carts.Cart{}, &common.Image{}, &entities_product.CartItem{}, &entities_user.Address{})
 	if err != nil {
 		logrus.Fatal(" Cannot connect to database to AutoMigrate", err)
 	}

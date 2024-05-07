@@ -14,6 +14,7 @@ func Routes(r *gin.RouterGroup, appCtx app_context.Appcontext) {
 	{
 		authRoute.POST("/createCart", gin_carts.CreateCart(appCtx))
 		authRoute.DELETE("/deleteCart", gin_carts.DeleteCart(appCtx))
+		authRoute.GET("/getCart", gin_carts.GetCart(appCtx))
 		// authRoute.POST("/softDeleteProduct", gin_product.SoftDeleteProductHandler(appCtx))
 		// authRoute.POST("/updateProduct", gin_product.UpdateProductHandler(appCtx))
 		authRoute.PUT("/updateCart", gin_carts.UpdateCart(appCtx))

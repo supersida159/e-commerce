@@ -6,19 +6,17 @@ import (
 	"github.com/supersida159/e-commerce/pkg/middleware"
 	"github.com/supersida159/e-commerce/src/order/route_order/gin_order"
 	gin_product "github.com/supersida159/e-commerce/src/product/route_product/gin_product"
-	"github.com/supersida159/e-commerce/src/users/route_user/gin_user"
 )
 
 func Routes(r *gin.RouterGroup, appCtx app_context.Appcontext) {
 	r.POST("/list", gin_order.ListOrders(appCtx))
-	r.GET("/getProduct/:id", gin_user.Login(appCtx))
 	// r.POST("/register", gin_user.Register(appCtx))
 	authRoute := r.Group("/Private", middleware.RequireAuth(appCtx))
 	{
 		authRoute.GET("/getOrder/:id", gin_order.Getorder(appCtx))
 		authRoute.POST("/createOrder", gin_order.CreateOrderHandler(appCtx))
 		authRoute.POST("/softDeleteProduct", gin_product.SoftDeleteProductHandler(appCtx))
-		authRoute.POST("/updateProduct", gin_product.UpdateProductHandler(appCtx))
+		authRoute.PUT("/updateOrder/:id", gin_order.UpdateOrderHandler(appCtx))
 		// authRoute.PUT("/update", gin_user.UpdateUser(appCtx))
 		// authRoute.POST("/adminUpdate", gin_user.AddUpdateAddmin(appCtx))
 		// authRoute.POST("/register", userHandler.Register)

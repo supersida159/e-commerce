@@ -5,10 +5,12 @@ import (
 
 	"github.com/supersida159/e-commerce/common"
 	entities_carts "github.com/supersida159/e-commerce/src/cart/entities_cart"
+	"github.com/supersida159/e-commerce/src/product/entities_product"
+	"gorm.io/gorm"
 )
 
 type UpdateCartStore interface {
-	UpdateCart(ctx context.Context, data *entities_carts.Cart) error
+	UpdateCart(ctx context.Context, data *entities_product.CartItem, userID int) error
 	FindCart(ctx context.Context, userID int) (*entities_carts.Cart, error)
 }
 
@@ -22,12 +24,12 @@ func NewUpdateCartBiz(store UpdateCartStore) *updateCartBiz {
 	}
 }
 
-func (biz *updateCartBiz) UpdateCartBiz(ctx context.Context, data *entities_carts.Cart) error {
-	_, err := biz.store.FindCart(ctx, data.UserID)
-	if err != nil {
+func (biz *updateCartBiz) UpdateCartBiz(ctx context.Context, data *entities_product.CartItem, userID int) error {
+	_, err := biz.store.FindCart(ctx, userID)
+	if err != nil && !(err.Error() == gorm.ErrRecordNotFound.Error()) {
 		return common.ErrCannotUpdateEntity(entities_carts.EntityName, err)
 	}
-	if err := biz.store.UpdateCart(ctx, data); err != nil {
+	if err := biz.store.UpdateCart(ctx, data, userID); err != nil {
 		return common.ErrCannotUpdateEntity(entities_carts.EntityName, err)
 	}
 	return nil

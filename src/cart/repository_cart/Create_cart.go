@@ -15,7 +15,7 @@ func (s *sqlStore) CreateCart(ctx context.Context, data *entities_carts.Cart) er
 	//check and update quantity product
 	for index, itemindb := range data.Items {
 		var item entities_product.Product
-		if err := db.Table("products").Where("name = ?", itemindb.Product.Name).First(&item).Error; err == nil {
+		if err := db.Table("products").Where("id = ?", itemindb.ProductID).First(&item).Error; err == nil {
 			if item.Quantity > itemindb.Quantity { // check if quantity is enough
 				// if err := db.Table("products").Where("name  = ?", itemindb.Product.Name).Update("quantity", item.Quantity-itemindb.Quantity).Error; err != nil {
 				// 	return common.ErrDB(err)

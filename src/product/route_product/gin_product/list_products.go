@@ -51,12 +51,12 @@ func ListProducts(appCtx app_context.Appcontext) func(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, err)
 			return
 		}
-		for index, _ := range resData {
-			resData[index].Mask(true)
-			if index == len(resData)-1 {
-				paging.NextCursor = resData[index].FakeId.String()
-			}
-		}
+		// for index, _ := range resData {
+		// 	// resData[index].Mask(true)
+		// 	if index == len(resData)-1 {
+		// 		paging.NextCursor = resData[index].FakeId.String()
+		// 	}
+		// }
 
 		c.JSON(http.StatusOK, common.NewSuccessResponse(resData, &paging, &reqData))
 	}

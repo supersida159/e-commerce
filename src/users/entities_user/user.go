@@ -29,7 +29,7 @@ type User struct {
 	Role            string        `json:"role" gorm:"column:role;"`
 	Salt            string        `json:"-" gorm:"column:salt;"`
 	Phone           string        `json:"phone" gorm:"column:phone;"`
-	Address         []Address     `json:"address" gorm:"column:address;type:json"` // Using jsonb field
+	Address         []*Address    `json:"address,omitempty" gorm:"foreignKey:UserID;references:ID"` // Using jsonb field
 	Avatar          *common.Image `json:"avatar,omitempty" gorm:"column:avatar;type:json"`
 }
 
@@ -69,14 +69,14 @@ func (u *User) Mask(hideID bool) {
 
 type UserCreate struct {
 	common.SQLModel `json:",inline"`
-	Email           string    `json:"email" gorm:"column:email;"`
-	Password        string    `json:"password" gorm:"column:password;"`
-	FirstName       string    `json:"first_name" gorm:"column:first_name;"`
-	LastName        string    `json:"last_name" gorm:"column:last_name;"`
-	Role            string    `json:"-" gorm:"column:role;"`
-	Salt            string    `json:"-" gorm:"column:salt;"`
-	Phone           string    `json:"phone" gorm:"column:phone;"`
-	Address         []Address `json:"address" gorm:"column:address;type:jsonb"` // Using jsonb field
+	Email           string     `json:"email" gorm:"column:email;"`
+	Password        string     `json:"password" gorm:"column:password;"`
+	FirstName       string     `json:"first_name" gorm:"column:first_name;"`
+	LastName        string     `json:"last_name" gorm:"column:last_name;"`
+	Role            string     `json:"-" gorm:"column:role;"`
+	Salt            string     `json:"-" gorm:"column:salt;"`
+	Phone           string     `json:"phone" gorm:"column:phone;"`
+	Address         []*Address `json:"address,omitempty" gorm:"foreignKey:UserID;references:ID"` // Using jsonb field
 
 	Avatar *common.Images `json:"avatar,omitempty" gorm:"column:avatar;type:json"`
 }
@@ -109,15 +109,18 @@ type UserUpdate struct {
 	Role            string        `json:"-" gorm:"column:role;"`
 	Salt            string        `json:"-" gorm:"column:salt;"`
 	Phone           string        `json:"phone" gorm:"column:phone;"`
-	Address         []Address     `json:"address" gorm:"column:address;type:jsonb"` // Using jsonb field
+	Address         *Address      `json:"address,omitempty" gorm:"foreignKey:UserID;references:ID"` // Using jsonb field
 	Avatar          *common.Image `json:"avatar,omitempty" gorm:"column:avatar;type:json"`
 }
 
 type Address struct {
-	Street string `json:"street"`
-	City   string `json:"city"`
-	State  string `json:"state"`
+	common.SQLModel `json:",inline"`
+	UserID          int    `json:"user_id" gorm:"column:user_id;"`
+	Street          string `json:"street" gorm:"column:street;"`
+	City            string `json:"city" gorm:"column:city;"`
+	State           string `json:"state" gorm:"column:state;"`
 }
+
 type UpdatePermission struct {
 	UpdateEmail string `json:"updateEmail" gorm:"-"`
 	RoleUpdate  string `json:"roleUpdate" gorm:"-"`

@@ -23,6 +23,9 @@ func UpdateUser(appctx app_context.Appcontext) gin.HandlerFunc {
 		}
 		oldData := c.MustGet(common.CurrentUser).(common.Requester)
 		data.ID = oldData.GetUserID()
+		if data.Address != nil {
+			data.Address.UserID = data.ID
+		}
 		// missing check user submit the same data
 		store := repository_user.NewSQLStore(db)
 		md5 := hasher.NewMd5()

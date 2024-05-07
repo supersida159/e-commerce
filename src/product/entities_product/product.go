@@ -1,6 +1,8 @@
 package entities_product
 
-import "github.com/supersida159/e-commerce/common"
+import (
+	"github.com/supersida159/e-commerce/common"
+)
 
 const (
 	EntityName = "Product"
@@ -18,6 +20,18 @@ type Product struct {
 	Category        string        `json:"category" gorm:"column:category;type:varchar(255)"`
 	Brand           string        `json:"brand" gorm:"column:brand;type:varchar(255)"`
 	Sale            int           `json:"sale" gorm:"column:sale;not null;default:0"`
+}
+
+type CartItem struct {
+	ID        int     `gorm:"primaryKey" json:"id"`
+	CartID    int     `json:"cart_id" `
+	ProductID int     `json:"product_id"`
+	Product   Product `gorm:"foreignKey:ProductID" json:"product"`
+	Quantity  int     `json:"quantity"`
+}
+
+func (c CartItem) TableName() string {
+	return "cart_items"
 }
 
 func (p Product) TableName() string {

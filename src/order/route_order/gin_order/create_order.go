@@ -1,6 +1,7 @@
 package gin_order
 
 import (
+	"io"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -23,13 +24,14 @@ func CreateOrderHandler(appCtx app_context.Appcontext) func(c *gin.Context) {
 		biz := usecase_orders.NewCreateOrderBiz(store, appCtx.GetPubSub(), *appCtx.GetCache())
 
 		if err := c.ShouldBind(&reqData); err != nil {
-			c.JSON(http.StatusBadRequest, common.ErrInvalidRequest(err))
-			return
+			if err == io.EOF {
+
+			} else {
+				c.JSON(http.StatusBadRequest, err)
+				return
+			}
 		}
-		if len(reqData.Products) == 0 {
-			c.JSON(http.StatusBadRequest, common.ErrInvalidRequest(nil))
-			return
-		}
+
 		data = ConvertPlaceOrderReqToOrder(reqData)
 		data.UserOrderID = userContext.GetUserID()
 
@@ -39,7 +41,8 @@ func CreateOrderHandler(appCtx app_context.Appcontext) func(c *gin.Context) {
 		}
 
 		data.Mask(true)
-		c.JSON(http.StatusOK, common.SimpleSuccessResponse(data))
+
+		c.JSON(http.StatusOK, common.SimpleSuccessResponse(data.FakeId))
 	}
 
 }
@@ -47,21 +50,10 @@ func CreateOrderHandler(appCtx app_context.Appcontext) func(c *gin.Context) {
 func ConvertPlaceOrderReqToOrder(placeOrderReq entities_orders.PlaceOrderReq) entities_orders.Order {
 	order := entities_orders.Order{
 		UserOrderID:    0,
-		CustomerName:   placeOrderReq.CustomerName,
-		CustomerPhone:  placeOrderReq.CustomerPhone,
 		Shipping:       placeOrderReq.Shipping, // Add appropriate initialization or mapping
 		OrderTotal:     0.0,                    // Add appropriate initialization or mapping
 		Notes:          placeOrderReq.Notes,
-		Address:        placeOrderReq.Address,
 		OrderCancelled: false, // Add appropriate initialization or mapping
-	}
-	for _, p := range placeOrderReq.Products {
-
-		order.Products = append(order.Products, &entities_orders.ProductQuantity{
-			ProductID: p.ProductID,
-
-			Quantity: p.Quantity,
-		})
 	}
 
 	// Add any additional mapping or initialization logic for new fields

@@ -10,9 +10,11 @@ import (
 )
 
 type ProductImage struct {
-	Color     string        `json:"color"`
-	ColorCode string        `json:"colorCode"`
-	Image     *common.Image `json:"image"`
+	common.SQLModel `json:",inline"`
+	ProductID       int           `json:"product_id"`
+	Color           string        `json:"color"`
+	ColorCode       string        `json:"colorCode"`
+	Image           *common.Image `json:"image" `
 }
 
 func (j *ProductImage) TableName() string {

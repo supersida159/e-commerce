@@ -13,6 +13,7 @@ func Routes(r *gin.RouterGroup, appCtx app_context.Appcontext) {
 	authRoute := r.Group("/Private", middleware.RequireAuth(appCtx))
 	{
 		authRoute.GET("/infor", gin_user.GetProfile(appCtx))
+		authRoute.GET("/address", gin_user.GetAddress(appCtx))
 		authRoute.PUT("/update", gin_user.UpdateUser(appCtx))
 		authRoute.POST("/adminUpdate", gin_user.AddUpdateAddmin(appCtx))
 		// authRoute.POST("/register", userHandler.Register)
