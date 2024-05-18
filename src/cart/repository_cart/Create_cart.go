@@ -44,7 +44,7 @@ func (s *sqlStore) FindCart(ctx context.Context, userID int) (*entities_carts.Ca
 
 	var cart entities_carts.Cart
 
-	if err := db.Where("UserID = ?", userID).First(&cart).Error; err != nil {
+	if err := db.Where("UserID = ?", userID).Where("status = ?", 1).Last(&cart).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, common.RecordNotFound
 		}

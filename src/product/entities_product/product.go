@@ -82,12 +82,13 @@ type ListProductReq struct {
 	common.SQLModel `json:",inline"`
 	Name            string `json:"name,omitempty" form:"name"`
 	Code            string `json:"code,omitempty" form:"code"`
-	Category        string `json:"category,omitempty" form:"category"`
+	Category        string `json:"-" form:"category"`
 	Brand           string `json:"brand,omitempty" form:"brand"`
 	Active          *bool  `json:"active,omitempty" form:"active"`
 	Limit           int64  `json:"-" form:"limit"`
 	OrderBy         string `json:"-" form:"order_by"`
 	OrderDesc       bool   `json:"-" form:"order_desc"`
+	SearchTerm      string
 }
 
 func (p *ListProductReq) Mask(hideID bool) {

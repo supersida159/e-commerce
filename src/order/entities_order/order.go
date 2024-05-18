@@ -107,6 +107,7 @@ type UpdateOrder struct {
 	Notes           string                 `json:"notes" gorm:"column:notes"`
 	OrderCancelled  bool                   `gorm:"column:order_cancelled" json:"orderCancelled"`
 	AddressID       int                    `gorm:"column:address_id" json:"address_id"` // Notes or comments related to the order
+	Shipping        ShippingInfo           `gorm:"embedded" json:"shipping",type:json`
 	Address         *entities_user.Address `gorm:"foreignKey:AddressID" json:"address"` // Address where the order should be delivered
 }
 
@@ -144,4 +145,8 @@ func (o *ListOrderReq) Mask(hideID bool) {
 	} else if !hideID {
 		o.DeID()
 	}
+}
+
+func (o *Order) GetUserOrderID() int {
+	return o.UserOrderID
 }

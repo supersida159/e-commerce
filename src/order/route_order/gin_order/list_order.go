@@ -20,9 +20,21 @@ func ListOrders(appCtx app_context.Appcontext) func(c *gin.Context) {
 		var reqData entities_orders.ListOrderReq
 		var resData []entities_orders.Order
 		var paging common.Paging
+		var userID int
 
 		store := repository_orders.NewSQLStore(appCtx.GetMainDBConnection())
 		biz := usecase_orders.NewListOrdersBiz(store)
+
+		CurrentUser := c.MustGet(common.CurrentUser).(common.Requester)
+
+		if CurrentUser.GetRole() == "admin" {
+			userID = 0
+		} else if CurrentUser.GetRole() == "user" {
+			userID = CurrentUser.GetUserID()
+		} else {
+			c.JSON(http.StatusBadRequest, common.ErrInvalidRequest(nil))
+			return
+		}
 
 		if err := c.ShouldBind(&reqData); err != nil {
 			if errors.Is(err, io.EOF) {
@@ -39,7 +51,7 @@ func ListOrders(appCtx app_context.Appcontext) func(c *gin.Context) {
 		paging.FakeCusor = c.Query("cursor")
 		paging.Fullfill()
 		reqData.Mask(false)
-		resData, err := biz.ListOrdersBiz(c.Request.Context(), &reqData, &paging)
+		resData, err := biz.ListOrdersBiz(c.Request.Context(), &reqData, &paging, userID)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, err)
 			return

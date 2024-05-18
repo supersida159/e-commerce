@@ -1,21 +1,36 @@
 package subscriber
 
-// import (
-// 	"context"
+import (
+	"context"
 
-// 	"github.com/supersida159/e-commerce/src/order/repository_orders"
-// 	"github.com/supersida159/learningGO/component"
-// 	"github.com/supersida159/learningGO/pubsub"
-// 	"github.com/supersida159/learningGO/skio"
-// )
+	"github.com/supersida159/e-commerce/pkg/app_context"
+	"github.com/supersida159/e-commerce/pkg/pubsub"
+	repository_carts "github.com/supersida159/e-commerce/src/cart/repository_cart"
+)
 
-// func RunDecreaseLikeCountAfterUserLikeRestaurant(appCtx component.Appcontext) consumerJob {
+type HashUserCreateOrderID interface {
+	GetUserOrderID() int
+}
+
+func RunCreateNewCartAfterCreateAnOrder(appCtx app_context.Appcontext) consumerJob {
+	return consumerJob{
+		Title: "PleaceAnNewOrder",
+		Hld: func(ctx context.Context, msg *pubsub.Message) error {
+			store := repository_carts.NewSQLStore(appCtx.GetMainDBConnection())
+			likedata := msg.Data().(HashUserCreateOrderID)
+
+			return store.DeleteCart(ctx, likedata.GetUserOrderID())
+		},
+	}
+}
+
+// func RunCreateAnOrder(appCtx app_context.Appcontext) consumerJob {
 // 	return consumerJob{
 // 		Title: "PleaceAnNewOrder",
 // 		Hld: func(ctx context.Context, msg *pubsub.Message) error {
 // 			store := repository_orders.NewSQLStore(appCtx.GetMainDBConnection())
-// 			likedata := msg.Data().(HashRestaurantID)
-// 			return store.DecreaseLikeCount(ctx, likedata.GetRestaurantID())
+
+// 			return store.CreateOrder(ctx, msg.Data().(*entities_orders.Order))
 // 		},
 // 	}
 // }

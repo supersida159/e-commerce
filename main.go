@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -12,10 +13,12 @@ import (
 	"github.com/supersida159/e-commerce/pkg/goroutineinmain"
 	"github.com/supersida159/e-commerce/pkg/pubsub/pubsublocal"
 	"github.com/supersida159/e-commerce/pkg/redis"
+	"github.com/supersida159/e-commerce/pkg/skio"
 	entities_carts "github.com/supersida159/e-commerce/src/cart/entities_cart"
 	entities_orders "github.com/supersida159/e-commerce/src/order/entities_order"
 	"github.com/supersida159/e-commerce/src/product/entities_product"
 	httpServer "github.com/supersida159/e-commerce/src/server"
+	subscriber "github.com/supersida159/e-commerce/src/subcriber"
 	"github.com/supersida159/e-commerce/src/users/entities_user"
 	"github.com/supersida159/e-commerce/src/users/repository_user"
 )
@@ -48,6 +51,12 @@ func main() {
 	err = goroutineinmain.RunExpireOrder(appctx)
 	if err != nil {
 		logrus.Fatal(" Cannot connect to database to AutoMigrate", err)
+	}
+
+	rtengine := skio.NewEngine()
+
+	if err := subscriber.NewEngine(appctx, rtengine).Start(); err != nil {
+		log.Fatalln(err)
 	}
 
 	httpSvr := httpServer.NewServer(appctx)

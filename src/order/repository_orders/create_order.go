@@ -11,7 +11,7 @@ import (
 
 func (s *sqlStore) CreateOrder(ctx context.Context, data *entities_orders.Order) error {
 	db := s.db.Begin()
-	err := db.Table("Cart").Preload("Items.Product").Where("UserID = ?", data.UserOrderID).First(&data.Cart).Error
+	err := db.Table("Cart").Preload("Items.Product").Where("UserID = ?", data.UserOrderID).Where("status = 1").Last(&data.Cart).Error
 	if err != nil {
 		return common.ErrCannotGetEntity(entities_orders.EntityName, err)
 	}
@@ -41,7 +41,6 @@ func (s *sqlStore) CreateOrder(ctx context.Context, data *entities_orders.Order)
 	//get total
 	data.GetOrderTotal()
 	//create an order
-	db.Table("cart")
 	if err := db.Table("orders").Create(&data).Error; err != nil {
 		db.Rollback()
 		return common.ErrDB(err)
@@ -67,6 +66,10 @@ func (s *sqlStore) OrderCancelled(ctx context.Context, data *entities_orders.Ord
 		}
 	}
 	if err := db.Table("orders").Where("id = ?", data.ID).Update("order_cancelled", true).Error; err != nil {
+		db.Rollback()
+		return common.ErrDB(err)
+	}
+	if err := db.Table("orders").Where("id = ?", data.ID).Update("status", 0).Error; err != nil {
 		db.Rollback()
 		return common.ErrDB(err)
 	}

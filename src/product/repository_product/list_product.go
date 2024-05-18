@@ -71,6 +71,9 @@ func buildQuery(db *gorm.DB, filter *entities_product.ListProductReq) *gorm.DB {
 		fmt.Println("GetLocalID:", filter.FakeId.GetLocalID())
 		db.Where("id = ?", filter.FakeId.GetLocalID())
 	}
+	if filter.SearchTerm != "" {
+		db.Where("name LIKE ?", "%"+filter.SearchTerm+"%")
+	}
 
 	// Add conditions for CreatedAt and UpdatedAt
 	if filter.CreatedAt != nil && !filter.CreatedAt.IsZero() {

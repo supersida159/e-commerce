@@ -11,7 +11,7 @@ import (
 
 func (s *sqlStore) UpdateCart(ctx context.Context, data *entities_product.CartItem, userID int) error {
 	var cart entities_carts.Cart
-	err := s.db.Table(entities_carts.Cart{}.TableName()).Where("UserID = ?", userID).Preload("Items").First(&cart).Error
+	err := s.db.Table(entities_carts.Cart{}.TableName()).Where("UserID = ?", userID).Where("status=?", 1).Preload("Items").First(&cart).Error
 	if err == gorm.ErrRecordNotFound {
 		//create cart
 		err = s.CreateCart(ctx, &entities_carts.Cart{UserID: userID, Items: []*entities_product.CartItem{data}})

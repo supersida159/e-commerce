@@ -9,10 +9,11 @@ import (
 )
 
 func Routes(r *gin.RouterGroup, appCtx app_context.Appcontext) {
-	r.POST("/list", gin_order.ListOrders(appCtx))
 	// r.POST("/register", gin_user.Register(appCtx))
 	authRoute := r.Group("/Private", middleware.RequireAuth(appCtx))
 	{
+		authRoute.GET("/list", gin_order.ListOrders(appCtx))
+
 		authRoute.GET("/getOrder/:id", gin_order.Getorder(appCtx))
 		authRoute.POST("/createOrder", gin_order.CreateOrderHandler(appCtx))
 		authRoute.POST("/softDeleteProduct", gin_product.SoftDeleteProductHandler(appCtx))

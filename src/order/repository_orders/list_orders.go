@@ -18,13 +18,10 @@ func (s *sqlStore) ListOrders(ctx context.Context,
 
 	db := s.db.Table(entities_orders.Order{}.TableName()).Where(conditions)
 
-	for _, info := range moreInfo {
-		db = db.Preload(info)
-	}
 	db = buildQuery(db, fillter)
 
 	// Find total count
-	if err := db.Count(&paging.Total).Error; err != nil {
+	if err := db.Model(entities_orders.Order{}).Count(&paging.Total).Error; err != nil {
 		return nil, common.ErrDB(err)
 	}
 
@@ -36,6 +33,12 @@ func (s *sqlStore) ListOrders(ctx context.Context,
 			db = db.Where("id < ?", uid.GetLocalID())
 		} else {
 			db = db.Offset((paging.Page - 1) * paging.Limit)
+		}
+	}
+	for _, info := range moreInfo {
+		err := db.Preload(info).Error
+		if err != nil {
+			return nil, common.ErrDB(err)
 		}
 	}
 

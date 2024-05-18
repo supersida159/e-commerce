@@ -11,7 +11,7 @@ func (s *sqlStore) GetOrder(ctx context.Context, id int) (*entities_orders.Order
 
 	var data entities_orders.Order
 	db := s.db
-	if err := db.Table(data.TableName()).Where("id = ?", id).First(&data).Error; err != nil {
+	if err := db.Table(data.TableName()).Where("id = ?", id).Preload("Cart.Items.Product").Preload("Address").First(&data).Error; err != nil {
 		return nil, common.ErrDB(err)
 	}
 	return &data, nil

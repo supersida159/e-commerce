@@ -26,8 +26,16 @@ func NewListOrdersBiz(store ListOrdersStore) *listOrdersBiz {
 	}
 }
 
-func (biz *listOrdersBiz) ListOrdersBiz(ctx context.Context, fillter *entities_orders.ListOrderReq, paging *common.Paging) ([]entities_orders.Order, error) {
-	results, err := biz.store.ListOrders(ctx, nil, fillter, paging)
+func (biz *listOrdersBiz) ListOrdersBiz(ctx context.Context, fillter *entities_orders.ListOrderReq, paging *common.Paging, userid int) ([]entities_orders.Order, error) {
+	var results []entities_orders.Order
+	var err error
+	if userid > 0 {
+		results, err = biz.store.ListOrders(ctx, map[string]interface{}{"user_order_id": userid}, fillter, paging, "Cart", "Items", "Product")
+
+	} else {
+		results, err = biz.store.ListOrders(ctx, nil, fillter, paging, "Cart.Items.Product")
+
+	}
 	if err != nil {
 		return nil, common.ErrCannotListEntity(entities_orders.EntityName, err)
 	}
