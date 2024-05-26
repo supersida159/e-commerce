@@ -25,7 +25,9 @@ import (
 
 func main() {
 	cfg := config.LoadConfig()
+
 	// logger.Initialize(cfg.Environment)
+	fmt.Println("url db222:", cfg.DatabaseURI)
 
 	db, err := dbs.NewDatabase(cfg.DatabaseURI)
 	fmt.Println("url db:", cfg.DatabaseURI)

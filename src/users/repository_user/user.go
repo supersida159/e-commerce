@@ -83,6 +83,7 @@ func (s *sqlStore) UpdateUser(ctx context.Context, data *entities_user.UserUpdat
 
 	}
 	data.Address = nil
+
 	if err := db.Table(data.TableName()).Where("id = ?", data.ID).Updates(&data).Error; err != nil {
 		return common.ErrDB(err)
 	}

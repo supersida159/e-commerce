@@ -1,13 +1,11 @@
 package config
 
 import (
+	"fmt"
 	"log"
-	"path/filepath"
-	"runtime"
 	"time"
 
-	"github.com/caarlos0/env"
-	"github.com/joho/godotenv"
+	"github.com/caarlos0/env/v6"
 )
 
 const (
@@ -23,20 +21,20 @@ var AuthIgnoreMethods = []string{
 }
 
 type Schema struct {
-	Environment   string `env:"environment"`
-	HttpPort      int    `env:"http_port"`
-	GrpcPort      int    `env:"grpc_port"`
-	AuthSecret    string `env:"auth_secret"`
-	DatabaseURI   string `env:"database_uri"`
-	RedisURI      string `env:"redis_uri"`
-	RedisPassword string `env:"redis_password"`
-	RedisDB       int    `env:"redis_db"`
-	SecretKey     string `env:"secret_key"`
-	S3BucketName  string `env:"s3BucketName"`
-	S3Region      string `env:"s3Region"`
-	S3APIKey      string `env:"s3APIKey"`
-	S3SecretKey   string `env:"s3SecretKey"`
-	S3Domain      string `env:"s3Domain"`
+	Environment   string `env:"ENVIRONMENT"`
+	HttpPort      int    `env:"HTTP_PORT"`
+	GrpcPort      int    `env:"GRPC_PORT"`
+	AuthSecret    string `env:"AUTH_SECRET"`
+	DatabaseURI   string `env:"DATABASE_URI"`
+	RedisURI      string `env:"REDIS_URI"`
+	RedisPassword string `env:"REDIS_PASSWORD"`
+	RedisDB       int    `env:"REDIS_DB"`
+	SecretKey     string `env:"SECRET_KEY"`
+	S3BucketName  string `env:"S3_BUCKET_NAME"`
+	S3Region      string `env:"S3_REGION"`
+	S3APIKey      string `env:"S3_API_KEY"`
+	S3SecretKey   string `env:"S3_SECRET_KEY"`
+	S3Domain      string `env:"S3_DOMAIN"`
 }
 
 var (
@@ -44,18 +42,11 @@ var (
 )
 
 func LoadConfig() *Schema {
-	_, filename, _, _ := runtime.Caller(0)
-	currentDir := filepath.Dir(filename)
-
-	err := godotenv.Load(filepath.Join(currentDir, "config.sample.yaml"))
-	if err != nil {
-		log.Printf("Error on load configuration file, error: %v", err)
-	}
-
+	// No need to load a .env file, directly parse environment variables
 	if err := env.Parse(&cfg); err != nil {
-		log.Fatalf("Error on parsing configuration file, error: %v", err)
+		log.Fatalf("Error parsing environment variables: %v", err)
 	}
-
+	fmt.Println(cfg)
 	return &cfg
 }
 

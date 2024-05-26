@@ -67,6 +67,16 @@ func ErrDB(err error) *AppError {
 	return NewErrorRespone(err, "something went wrong with DB", err.Error(), "DB_ERROR")
 }
 
+func NewErrInvalidPassword() *AppError {
+	return &AppError{
+		StatusCode: http.StatusBadRequest,
+		RootErr:    errors.New("invalid password"),
+		Message:    "invalid password",
+		Log:        "invalid password",
+		Key:        "INVALID_PASSWORD",
+	}
+}
+
 func ErrInvalidRequest(err error) *AppError {
 	return NewErrorRespone(err, "invalid request", err.Error(), "INVALID_REQUEST")
 }

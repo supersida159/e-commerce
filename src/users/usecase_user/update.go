@@ -28,10 +28,33 @@ func NewUpdateBusiness(appCtx app_context.Appcontext, storeUser UpdateStorage, h
 }
 
 func (b *UpdateBusiness) UpdateUser(ctx context.Context, data *entities_user.UserUpdate) error {
-	if data.Password != "" {
-		salt := common.GenSalt(50)
-		data.Password = b.hasher.Hash(data.Password + salt)
-		data.Salt = salt
+	var oldData *entities_user.User
+
+	oldData, err := b.storeUser.FindUser(ctx, map[string]interface{}{"id": data.ID})
+	if err != nil {
+		return common.ErrCannotGetEntity(entities_user.UserRoloUser.String(), err)
+	}
+	if data.NewPassword != "" {
+		if data.Password != "" {
+			if data.NewPassword == data.Password {
+				return common.NewErrInvalidPassword()
+			}
+
+			data.Password = b.hasher.Hash(data.Password + oldData.Salt)
+			if data.Password != oldData.Password {
+				return common.NewErrInvalidPassword()
+			}
+			salt := common.GenSalt(50)
+
+			data.Password = b.hasher.Hash(data.NewPassword + salt)
+
+			data.Salt = salt
+
+		} else {
+			return common.NewErrInvalidPassword()
+		}
+	} else {
+		data.Password = ""
 	}
 	if err := b.storeUser.UpdateUser(ctx, data); err != nil {
 		return common.ErrDB(err)

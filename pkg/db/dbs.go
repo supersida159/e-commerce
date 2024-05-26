@@ -1,8 +1,11 @@
 package dbs
 
 import (
+	"fmt"
+
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 type Database struct {
@@ -10,10 +13,14 @@ type Database struct {
 }
 
 func NewDatabase(url string) (*Database, error) {
+	fmt.Println("URL_MYSQL11", url)
 	database := &Database{} // Create an instance of the Database struct
 
 	var err error
-	database.db, err = gorm.Open(mysql.Open(url), &gorm.Config{})
+	fmt.Println("URL_MYSQL", url)
+	database.db, err = gorm.Open(mysql.Open(url), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Info),
+	})
 	if err != nil {
 		return nil, err
 	}

@@ -9,7 +9,24 @@
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "${workspaceFolder}"
+            "program": "${workspaceFolder}",
+            "env": {
+                "ENVIRONMENT": "Development",
+                "HTTP_PORT": "8080",
+                "GRPC_PORT": "8889",
+                "AUTH_SECRET": "######",
+                "DATABASE_URI": "root:Tungpro123@@tcp(127.0.0.1:3308)/e-commerce?parseTime=true",
+                "REDIS_URI": "localhost:6379",
+                "REDIS_PASSWORD": "",
+                "REDIS_DB": "0",
+                "SECRET_KEY": "Golang Course",
+                "S3_BUCKET_NAME": "g04.images",
+                "S3_REGION": "ap-southeast-1",
+                "S3_API_KEY": "AKIA6QXOKIY5CNHUZ5PQ",
+                "S3_SECRET_KEY": "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",
+                "S3_DOMAIN": "https://s3.ap-southeast-1.amazonaws.com/g04.images"
+            }
+            
         }
     ]
 }

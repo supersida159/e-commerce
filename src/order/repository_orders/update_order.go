@@ -24,7 +24,7 @@ func (s *sqlStore) UpdateOrder(ctx context.Context, data *entities_orders.Update
 		}
 	}
 
-	if err := db.Table(data.TableName()).Where("id = ?", data.ID).Updates(&data).Error; err != nil {
+	if err := db.Table("orders").Where("id = ?", data.ID).Updates(data).Error; err != nil {
 		return common.ErrDB(err)
 	}
 	return nil

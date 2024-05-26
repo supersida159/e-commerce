@@ -12,7 +12,7 @@ const (
 )
 const (
 	CurrentUser     = "user"
-	ExpireOrderTime = 20 * time.Second
+	ExpireOrderTime = 12 * time.Minute
 )
 
 type Requester interface {

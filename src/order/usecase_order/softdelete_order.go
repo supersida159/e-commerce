@@ -8,7 +8,6 @@ import (
 )
 
 type SoftDeleteOrderStore interface {
-	// FindOrder(ctx context.Context, conditions map[string]interface{}, moreInfo ...string) (*entities_Order.Order, error)
 	SoftDeleteOrder(ctx context.Context, id int) error
 }
 

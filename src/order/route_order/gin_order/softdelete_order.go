@@ -7,8 +7,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/supersida159/e-commerce/common"
 	"github.com/supersida159/e-commerce/pkg/app_context"
-	repositoryproduct "github.com/supersida159/e-commerce/src/product/repository_product"
-	"github.com/supersida159/e-commerce/src/product/usecase_product"
+	"github.com/supersida159/e-commerce/src/order/repository_orders"
+	usecase_orders "github.com/supersida159/e-commerce/src/order/usecase_order"
 )
 
 func SoftDeleteProductHandler(appCtx app_context.Appcontext) func(c *gin.Context) {
@@ -31,9 +31,9 @@ func SoftDeleteProductHandler(appCtx app_context.Appcontext) func(c *gin.Context
 			c.JSON(http.StatusUnauthorized, common.ErrNoPermission(nil))
 			return
 		}
-		store := repositoryproduct.NewSQLStore(appCtx.GetMainDBConnection())
-		biz := usecase_product.NewSoftDeleteProductBiz(store)
-		if err := biz.SoftDeleteProductBiz(c.Request.Context(), int(FakeId.GetLocalID())); err != nil {
+		store := repository_orders.NewSQLStore(appCtx.GetMainDBConnection())
+		biz := usecase_orders.NewSoftDeleteOrderBiz(store)
+		if err := biz.SoftDeleteOrderBiz(c.Request.Context(), int(FakeId.GetLocalID())); err != nil {
 			c.JSON(http.StatusBadRequest, err)
 			return
 		}

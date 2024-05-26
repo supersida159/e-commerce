@@ -2,7 +2,6 @@ package gin_order
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/supersida159/e-commerce/common"
@@ -25,9 +24,14 @@ func UpdateOrderHandler(appCtx app_context.Appcontext) func(c *gin.Context) {
 		uidorderID, _ := common.FromBase58(c.Param("id"))
 		orderID := int(uidorderID.GetLocalID())
 		data.ID = orderID
-		data.Shipping.EstimatedDelivery = time.Now().Add(3 * 24 * time.Hour)
-		data.Shipping.Method = "COD"
-		data.Status = 2
+
+		if data.Status != 1 {
+			if UserOrderID.GetRole() != "admin" {
+				c.JSON(http.StatusUnauthorized, common.ErrInvalidRequest(nil))
+				return
+			}
+		}
+
 		store := repository_orders.NewSQLStore(appCtx.GetMainDBConnection())
 		biz := usecase_orders.NewUpdateOrderBiz(store)
 		if err := biz.UpdateOrderBiz(c.Request.Context(), &data, UserOrderID.GetUserID()); err != nil {

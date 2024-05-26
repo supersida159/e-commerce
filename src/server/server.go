@@ -58,6 +58,11 @@ func (s *Server) MapRoutes() error {
 	route_product.Routes(v1.Group("/product"), s.appCtx)
 	route_order.Routes(v1.Group("/order"), s.appCtx)
 	route_cart.Routes(v1.Group("/cart"), s.appCtx)
+	v1.GET("/ping", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"message": "pong",
+		})
+	})
 	return nil
 
 }

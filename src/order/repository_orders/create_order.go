@@ -41,6 +41,7 @@ func (s *sqlStore) CreateOrder(ctx context.Context, data *entities_orders.Order)
 	//get total
 	data.GetOrderTotal()
 	//create an order
+	data.Status = 2
 	if err := db.Table("orders").Create(&data).Error; err != nil {
 		db.Rollback()
 		return common.ErrDB(err)
@@ -69,7 +70,7 @@ func (s *sqlStore) OrderCancelled(ctx context.Context, data *entities_orders.Ord
 		db.Rollback()
 		return common.ErrDB(err)
 	}
-	if err := db.Table("orders").Where("id = ?", data.ID).Update("status", 0).Error; err != nil {
+	if err := db.Table("orders").Where("id = ?", data.ID).Update("status", 1).Error; err != nil {
 		db.Rollback()
 		return common.ErrDB(err)
 	}

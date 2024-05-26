@@ -111,6 +111,7 @@ type UserUpdate struct {
 	Phone           string        `json:"phone" gorm:"column:phone;"`
 	Address         *Address      `json:"address,omitempty" gorm:"foreignKey:UserID;references:ID"` // Using jsonb field
 	Avatar          *common.Image `json:"avatar,omitempty" gorm:"column:avatar;type:json"`
+	NewPassword     string        `json:"new_password,omitempty" gorm:"-"`
 }
 
 type Address struct {
