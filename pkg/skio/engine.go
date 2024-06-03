@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	socketio "github.com/googollee/go-socket.io"
@@ -28,6 +29,11 @@ type RtEngine struct {
 	server  *socketio.Server
 	storage map[int][]AppSocket
 	locker  *sync.RWMutex
+}
+
+type Person struct {
+	Name string
+	Age  int
 }
 
 // UserSocket implements RealTimeEngine.
@@ -88,6 +94,7 @@ func (e *RtEngine) EmitToRoom(room, event string, v ...interface{}) error {
 func (e *RtEngine) EmitToUser(userId int, event string, data ...interface{}) error {
 	sockets := e.getAppSockets(userId)
 	for _, s := range sockets {
+		s.Emit("TopicOrderCreated", "Emitting from server")
 		s.Emit(event, data...)
 	}
 	return nil
@@ -103,6 +110,15 @@ func (e *RtEngine) Run(appctx app_context.Appcontext, engine *gin.Engine) error 
 	e.server.OnConnect("/", func(s socketio.Conn) error {
 		s.SetContext("")
 		fmt.Println("connected:", s.ID(), "IP:", s.RemoteAddr())
+
+		go func() {
+			i := 0
+			for {
+				i++
+				s.Emit("test", fmt.Sprintf("hello %d", i))
+				time.Sleep(time.Second)
+			}
+		}()
 		return nil
 	})
 	e.server.OnError("/", func(s socketio.Conn, err error) {
@@ -110,7 +126,17 @@ func (e *RtEngine) Run(appctx app_context.Appcontext, engine *gin.Engine) error 
 	})
 
 	e.server.OnDisconnect("/", func(s socketio.Conn, reason string) {
-		fmt.Println("closed", reason)
+		fmt.Println("Disconnected:", s.ID(), "Reason:", reason)
+	})
+	e.server.OnEvent("/", "notice", func(s socketio.Conn, p Person) {
+		fmt.Println("notice:", p.Name, p.Age)
+		p.Age = 33
+		s.Emit("reply", "have "+p.Name)
+
+	})
+	e.server.OnEvent("/", "test", func(s socketio.Conn, msg string) string {
+		fmt.Println("server receive test:", msg)
+		return msg
 	})
 
 	e.server.OnEvent("/", "Authenticate", func(s socketio.Conn, token string) {
@@ -146,6 +172,10 @@ func (e *RtEngine) Run(appctx app_context.Appcontext, engine *gin.Engine) error 
 		user.Mask(false)
 		s.Emit("Authenticate", user)
 		e.server.OnEvent("/", "OnUserUpdateLocation", skuser.OnUserUpdateLocation(appctx, user))
+	})
+
+	e.server.OnEvent("/", "TestingWs", func(s socketio.Conn, err error) {
+		fmt.Println("TestingWs", err)
 	})
 	go e.server.Serve()
 

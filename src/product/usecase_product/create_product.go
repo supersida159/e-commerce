@@ -8,7 +8,9 @@ import (
 )
 
 type CreateProductStore interface {
-	CreateProduct(ctx context.Context, data *entities_product.Product) error
+	CreateProduct(
+		ctx context.Context,
+		data *entities_product.Product) error
 }
 
 type createProductBiz struct {
@@ -21,7 +23,9 @@ func NewCreateProductBiz(store CreateProductStore) *createProductBiz {
 	}
 }
 
-func (biz *createProductBiz) CreateProductBiz(ctx context.Context, data *entities_product.Product) error {
+func (biz *createProductBiz) CreateProductBiz(
+	ctx context.Context,
+	data *entities_product.Product) error {
 
 	if err := biz.store.CreateProduct(ctx, data); err != nil {
 		return common.ErrCannotCreateEntity(entities_product.EntityName, err)

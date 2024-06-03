@@ -21,18 +21,21 @@ type consumerEngine struct {
 	rtEngine skio.RealTimeEngine
 }
 
-func NewEngine(appCtx app_context.Appcontext, rtEngine skio.RealTimeEngine) *consumerEngine {
+func NewEngine(
+	appCtx app_context.Appcontext,
+	rtEngine skio.RealTimeEngine) *consumerEngine {
 	return &consumerEngine{
 		appCtx:   appCtx,
 		rtEngine: rtEngine,
 	}
 }
 
-func (engine *consumerEngine) Start( /*rtEngine skio.RealtimeEngine*/ ) error {
+func (engine *consumerEngine) Start() error {
 	engine.startSubTopic(
 		common.TopicOrderCreated,
 		false,
 		RunCreateNewCartAfterCreateAnOrder(engine.appCtx),
+		EmitCreateNewCartAfterCreateAnOrder(engine.appCtx, engine.rtEngine),
 	)
 
 	return nil

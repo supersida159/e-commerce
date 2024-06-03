@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/supersida159/e-commerce/pkg/app_context"
 	"github.com/supersida159/e-commerce/pkg/config"
+	"github.com/supersida159/e-commerce/pkg/skio"
 	"github.com/supersida159/e-commerce/src/cart/route_cart"
 	"github.com/supersida159/e-commerce/src/order/route_order"
 	route_product "github.com/supersida159/e-commerce/src/product/route_product"
@@ -29,7 +30,7 @@ func NewServer(appCtx app_context.Appcontext) *Server {
 	}
 }
 
-func (s *Server) Run() error {
+func (s *Server) Run(rte *skio.RtEngine) error {
 	// appctx := app_context.NewAppContext(db, s3Provider, secrectkey, pubsublocal.NewPubSub())
 	_ = s.engine.SetTrustedProxies(nil)
 	if s.appCtx.GetConfig().Environment == config.ProductionEnv {
@@ -38,6 +39,8 @@ func (s *Server) Run() error {
 	if err := s.MapRoutes(); err != nil {
 		log.Fatalf("MapRoutes Error: %v", err)
 	}
+
+	rte.Run(s.appCtx, s.engine)
 
 	if err := s.engine.Run(fmt.Sprintf(":%d", s.appCtx.GetConfig().HttpPort)); err != nil {
 		log.Fatalf("Running HTTP server: %v", err)
@@ -51,6 +54,7 @@ func (s Server) GetEngine() *gin.Engine {
 }
 func (s *Server) MapRoutes() error {
 
+	s.engine.StaticFile("/demo/", "./demo.html")
 	v1 := s.engine.Group("/api/v1")
 
 	route_user.Routes(v1.Group("/user"), s.appCtx)

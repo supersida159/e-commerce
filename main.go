@@ -34,10 +34,20 @@ func main() {
 	if err != nil {
 		logrus.Fatal("Cannot connect to database", err)
 	}
-	err = db.AutoMigrate(&entities_user.User{}, &entities_product.Product{}, &entities_orders.Order{}, &entities_carts.Cart{}, &common.Image{}, &entities_product.CartItem{}, &entities_user.Address{})
+	err = db.AutoMigrate(
+		&entities_user.User{},
+		&entities_product.Product{},
+		&entities_orders.Order{},
+		&entities_carts.Cart{},
+		&common.Image{},
+		&entities_product.CartItem{},
+		&entities_user.Address{},
+	)
+
 	if err != nil {
 		logrus.Fatal(" Cannot connect to database to AutoMigrate", err)
 	}
+
 	cache := redis.NewRedis(redis.Config{
 		Address:  cfg.RedisURI,
 		Password: cfg.RedisPassword,
@@ -62,8 +72,9 @@ func main() {
 	}
 
 	httpSvr := httpServer.NewServer(appctx)
+
 	httpSvr.GetEngine().Use(CORSMiddleware())
-	if err = httpSvr.Run(); err != nil {
+	if err = httpSvr.Run(rtengine); err != nil {
 		logrus.Fatal(" Cannot runHttp server", err)
 	}
 

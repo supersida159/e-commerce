@@ -2,7 +2,7 @@ APP_NAME=e-commerce
 DEPLOY_CONNECTION=root@167.172.75.249
 
 echo "Downloading packages..."
-go mod download
+npm install
 
 echo "Compiling..."
 CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o app

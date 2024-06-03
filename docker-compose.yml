@@ -1,23 +1,17 @@
-#docker run -d -p 80:80 -p 443:443 --network my-net --name nginx-proxy \
-#-e ENABLE_IPV6=true --privileged=true \
-#-v ~/nginx/vhost.d:/etc/nginx/vhost.d \
-#-v ~/nginx-certs:/etc/nginx/certs:ro \
-#-v ~/nginx-conf:/etc/nginx/conf.d \
-#-v ~/nginx-log:/var/log/nginx \
-#-v /usr/share/nginx/html:/usr/share/nginx/html \
-#-v /var/run/docker.sock:/tmp/docker.sock:ro \
-#--label nginx_proxy=true nginx
+docker network create my-net
+
+docker run -d -p 80:80 -p 443:443 --network my-net --name nginx-proxy -e ENABLE_IPV6=true --privileged=true \
+-v ~/nginx/vhost.d:/etc/nginx/vhost.d \
+-v ~/nginx-certs:/etc/nginx/certs:ro \
+-v ~/nginx-conf:/etc/nginx/conf.d \
+-v ~/nginx-logs:/var/log/nginx \
+-v /usr/share/nginx/html \
+-v /var/run/docker.sock:/tmp/docker.sock:ro \
+--label nginx_proxy jwilder/nginx-proxy
 
 # docker run -d --network my-net -v ~/nginx/vhost.d:/etc/nginx/vhost.d -v ~/nginx-certs:/etc/nginx/certs:rw -v /var/run/docker.sock:/var/run/docker.sock:ro --volumes-from nginx-proxy --privileged=true jrcs/letsencrypt-nginx-proxy-companion
 
 
-# docker run -d \
-#   --network my-net \
-#   -v ~/nginx/vhost.d:/etc/nginx/vhost.d \
-#   -v ~/nginx-certs:/etc/nginx/certs:rw \
-#   -v /var/run/docker.sock:/var/run/docker.sock:ro \
-#   --volumes-from nginx-proxy \
-#   jrcs/letsencrypt-nginx-proxy-companion
 
 
 # version: "3.8"
