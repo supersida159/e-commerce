@@ -2,4 +2,5 @@ config.sample.yaml
 app
 stg.sh
 .vscode
+.vscode/launch.json
 !.vscode/launch.json
