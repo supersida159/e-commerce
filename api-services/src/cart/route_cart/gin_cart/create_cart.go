@@ -7,17 +7,17 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/supersida159/e-commerce/api-services/common"
-	generic_business "github.com/supersida159/e-commerce/api-services/common/generics/business"
 	response "github.com/supersida159/e-commerce/api-services/common/responese"
 	"github.com/supersida159/e-commerce/api-services/pkg/app_context"
 	entities_carts "github.com/supersida159/e-commerce/api-services/src/cart/entities_cart"
 	repository_carts "github.com/supersida159/e-commerce/api-services/src/cart/repository_cart"
+	usecase_carts "github.com/supersida159/e-commerce/api-services/src/cart/usecase_cart"
 	"github.com/supersida159/e-commerce/api-services/src/product/entities_product"
 	"gorm.io/gorm"
 )
 
 type CartController struct {
-	CartService *repository_carts.CartStore
+	CartService *usecase_carts.CartBiz
 	AppContext  app_context.Appcontext
 	Validate    *common.Validator
 }
@@ -26,16 +26,16 @@ func NewCartController(appContext app_context.Appcontext) (*CartController, *com
 	dbs := appContext.GetMainDBConnection()
 
 	store := repository_carts.NewCartStore(dbs)
-	service := generic_business.NewGenericsService[entities_carts.Cart](store)
-
+	biz := usecase_carts.NewCartBiz(store)
+	// service := generic_business.NewGenericsService[entities_carts.Cart](store)
 	return &CartController{
-		CartService: service,
+		CartService: biz,
 		AppContext:  appContext,
 		Validate:    appContext.GetValidatetor(),
 	}, nil
 }
 
-func (controller *CartController) Create(c *gin.Context) {
+func (controller *CartController) CreateCart(c *gin.Context) {
 	var data entities_carts.Cart
 	userid := c.MustGet(common.CurrentUser).(common.Requester)
 
@@ -73,7 +73,7 @@ func (controller *CartController) Create(c *gin.Context) {
 	}
 }
 
-func (controller *CartController) Delete(c *gin.Context) {
+func (controller *CartController) DeleteCart(c *gin.Context) {
 	userid := c.MustGet(common.CurrentUser).(common.Requester)
 
 	var data entities_carts.Cart
@@ -86,7 +86,7 @@ func (controller *CartController) Delete(c *gin.Context) {
 		response.BuildErrorGinResponseAndAbort(c, err)
 		return
 	} else {
-		_, err := controller.CartService.Save(c, &data)
+		_, err := controller.CartService.Create(c, &data)
 		if err != nil {
 			response.BuildErrorGinResponseAndAbort(c, err)
 			return
@@ -171,7 +171,7 @@ func (controller *CartController) GetCart(c *gin.Context) {
 		"UserID": userid.GetUserID(),
 		"Status": 1,
 	}
-	carts, err := controller.CartService.FindWithConditions(c.Request.Context(), conditions, &paging, orderClauses, preloadClauses...)
+	carts, err := controller.CartService.FindList(c.Request.Context(), conditions, &paging, orderClauses, preloadClauses...)
 	if err != nil {
 		response.BuildErrorGinResponseAndAbort(c, err)
 		return

@@ -15,22 +15,14 @@ import (
 )
 
 type AuthenStore interface {
-	FindUser(ctx context.Context, conditions map[string]interface{}, moreInfo ...string) (*entities_user.User, error)
-}
-
-func ErrInvalidToken() *common.AppError {
-	return common.NewCustomError(
-		errors.New("invalid token"),
-		"invalid token",
-		"ErrInvalidToken",
-	)
+	FindUser(ctx context.Context, conditions map[string]interface{}, moreInfo ...string) (*entities_user.User, *common.AppError)
 }
 
 func ExtractTokenFromHeaderString(c string) (string, error) {
 	parts := strings.Split(c, " ")
 
 	if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-		return "", ErrInvalidToken()
+		return "", common.ErrInvalidToken(errors.New("invalid token"))
 	}
 	return parts[1], nil
 }
@@ -57,7 +49,7 @@ func RequireAuth(appCtx app_context.Appcontext) func(c *gin.Context) {
 		}
 
 		if user.Status == 0 {
-			panic(common.ErrNoPermission(errors.New("user has been deleted of baned")))
+			panic(common.ErrAccessDenied(errors.New("user has been deleted of baned")))
 		}
 		user.Mask(false)
 		c.Set(common.CurrentUser, user)

@@ -8,16 +8,16 @@ import (
 )
 
 func Routes(r *gin.RouterGroup, appCtx app_context.Appcontext) {
-
+	ginCarts, _ := gin_carts.NewCartController(appCtx)
 	// r.POST("/register", gin_user.Register(appCtx))
 	authRoute := r.Group("/Private", middleware.RequireAuth(appCtx))
 	{
-		authRoute.POST("/createCart", gin_carts.CreateCart(appCtx))
-		authRoute.DELETE("/deleteCart", gin_carts.DeleteCart(appCtx))
-		authRoute.GET("/getCart", gin_carts.GetCart(appCtx))
+		authRoute.POST("/createCart", ginCarts.CreateCart)
+		authRoute.DELETE("/deleteCart", ginCarts.DeleteCart)
+		authRoute.GET("/getCart", ginCarts.GetCart)
 		// authRoute.POST("/softDeleteProduct", gin_product.SoftDeleteProductHandler(appCtx))
 		// authRoute.POST("/updateProduct", gin_product.UpdateProductHandler(appCtx))
-		authRoute.PUT("/updateCart", gin_carts.UpdateCart(appCtx))
+		authRoute.PUT("/updateCart", ginCarts.UpdateCart)
 		// authRoute.POST("/adminUpdate", gin_user.AddUpdateAddmin(appCtx))
 		// authRoute.POST("/register", userHandler.Register)
 		// authRoute.POST("/login", userHandler.Login)

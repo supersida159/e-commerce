@@ -16,7 +16,7 @@ func Recover(ac app_context.Appcontext) gin.HandlerFunc {
 					c.AbortWithStatusJSON(appErr.StatusCode, appErr)
 					return
 				}
-				appErr := common.ErrInternal(err.(error))
+				appErr := common.ErrInternalServerError(err.(error))
 				c.AbortWithStatusJSON(appErr.StatusCode, appErr)
 				return
 			}

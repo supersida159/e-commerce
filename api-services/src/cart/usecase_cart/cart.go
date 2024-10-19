@@ -4,24 +4,36 @@ import (
 	"context"
 
 	"github.com/supersida159/e-commerce/api-services/common"
+	generic_business "github.com/supersida159/e-commerce/api-services/common/generics/business"
 	entities_carts "github.com/supersida159/e-commerce/api-services/src/cart/entities_cart"
-	repository_carts "github.com/supersida159/e-commerce/api-services/src/cart/repository_cart"
+	"github.com/supersida159/e-commerce/api-services/src/product/entities_product"
 )
 
-type Storage[T any] interface {
-	FindById(ctx context.Context, Id int, moreInfo ...string) (*T, *common.AppError)
-	Save(ctx context.Context, entity *T) (*T, *common.AppError)
-	Delete(ctx context.Context, id int) *common.AppError
-	Update(ctx context.Context, updateData *T) (*T, *common.AppError)
-	FindWithConditions(ctx context.Context, conditions map[string]interface{}, paging *common.Paging, orderClauses []string, moreInfo ...string) ([]T, *common.AppError)
+// ExtendedStorage extends the generic Storage interface with cart-specific methods
+type ExtendedStorage interface {
+	generic_business.Storage[entities_carts.Cart]
+	UpdateCartItems(ctx context.Context, data *entities_product.CartItem, userID int) *common.AppError
 }
 
+// CartBiz embeds the generic business service
 type CartBiz struct {
-	storage repository_carts.CartStore
+	*generic_business.GenericsService[entities_carts.Cart]
+	store ExtendedStorage
 }
 
-func NewCartBiz(storage repository_carts.CartStore) *CartBiz {
-	return &CartBiz{storage: storage}
+// NewCartBiz creates a new CartBiz instance that extends GenericsService
+func NewCartBiz(store ExtendedStorage) *CartBiz {
+	return &CartBiz{
+		GenericsService: generic_business.NewGenericsService[entities_carts.Cart](store),
+		store:           store,
+	}
+}
+
+func (s *CartBiz) UpdateCartItems(ctx context.Context, data *entities_product.CartItem, userID int) *common.AppError {
+	if err := s.store.UpdateCartItems(ctx, data, userID); err != nil {
+		return err
+	}
+	return nil
 }
 
 //	func (biz *CartBiz) CreateCartBiz(ctx context.Context, data *entities_carts.Cart) error {
@@ -33,41 +45,3 @@ func NewCartBiz(storage repository_carts.CartStore) *CartBiz {
 //		}
 //		return nil
 //	}
-func (s *CartBiz) Create(ctx context.Context, entity *entities_carts.Cart) (*entities_carts.Cart, *common.AppError) {
-
-	// Save the entity using the storage layer
-	newEntity, err := s.storage.Save(ctx, entity)
-	if err != nil {
-		return nil, err
-	}
-	return newEntity, nil
-}
-
-func (s *CartBiz) Delete(ctx context.Context, id int) *common.AppError {
-	err := s.storage.Delete(ctx, id)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (s *CartBiz) Update(ctx context.Context, updateData *entities_carts.Cart) (*entities_carts.Cart, *common.AppError) {
-	updatedEntity, err := s.storage.Update(ctx, updateData)
-	if err != nil {
-		return nil, err
-	}
-	return updatedEntity, nil
-}
-
-func (s *CartBiz) FindList(ctx context.Context,
-	conditions map[string]interface{},
-	paging *common.Paging,
-	orderClauses []string,
-	moreInfo ...string) ([]entities_carts.Cart, *common.AppError) {
-
-	entities, err := s.storage.FindWithConditions(ctx, conditions, paging, orderClauses, moreInfo...)
-	if err != nil {
-		return nil, err
-	}
-	return entities, nil
-}

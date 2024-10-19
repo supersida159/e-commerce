@@ -48,12 +48,12 @@ import (
 // }
 
 type CartStore struct {
-	generics_repository.GenericStore[*entities_carts.Cart]
+	generics_repository.GenericStore[entities_carts.Cart]
 }
 
 func NewCartStore(db *gorm.DB) *CartStore {
 	return &CartStore{
-		GenericStore: generics_repository.GenericStore[*entities_carts.Cart]{Db: db}, // Removed the '&'
+		GenericStore: generics_repository.GenericStore[entities_carts.Cart]{Db: db}, // Removed the '&'
 	}
 }
 
