@@ -63,3 +63,7 @@ func (ctx *AppCtx) GetCache() *redis.RedisWRealStore {
 func (ctx *AppCtx) GetConfig() *config.Schema {
 	return ctx.Cfg
 }
+
+func (ctx *AppCtx) GetValidatetor() *common.Validator {
+	return ctx.Validator
+}

@@ -13,7 +13,7 @@ import (
 )
 
 func RunExpireOrder(appctx *app_context.AppCtx) error {
-	rd := appctx.Cache.Client
+	rd := appctx.GetCache().Client
 
 	err := rd.ConfigSet(context.Background(), "notify-keyspace-events", "KEAx").Err()
 	if err != nil {

@@ -7,6 +7,9 @@ import (
 	"time"
 
 	// Updated import
+
+	goredis "github.com/redis/go-redis/v9" // Updated import path
+
 	"github.com/sirupsen/logrus"
 	"github.com/supersida159/e-commerce/api-services/src/users/entities_user"
 )
