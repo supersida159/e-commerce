@@ -1,0 +1,50 @@
+docker network create my-net
+
+docker run -d -p 80:80 -p 443:443 --network my-net --name nginx-proxy -e ENABLE_IPV6=true --privileged=true \
+-v ~/nginx/vhost.d:/etc/nginx/vhost.d \
+-v ~/nginx-certs:/etc/nginx/certs:ro \
+-v ~/nginx-conf:/etc/nginx/conf.d \
+-v ~/nginx-logs:/var/log/nginx \
+-v /usr/share/nginx/html \
+-v /var/run/docker.sock:/tmp/docker.sock:ro \
+--label nginx_proxy jwilder/nginx-proxy
+
+docker run -d --network my-net -v ~/nginx/vhost.d:/etc/nginx/vhost.d \
+-v ~/nginx-certs:/etc/nginx/certs:rw \
+-v /var/run/docker.sock:/var/run/docker.sock:ro --volumes-from nginx-proxy --privileged=true jrcs/letsencrypt-nginx-proxy-companion
+
+docker run -d -p 80:80 -p 443:443 --network my-net --name nginx-proxy-2 -e ENABLE_IPV6=true --privileged=true \
+-v /usr/share/nginx/html \
+-v /var/run/docker.sock:/tmp/docker.sock:ro \
+--label nginx_proxy jwilder/nginx-proxy
+
+# version: "3.8"
+# services:
+#   ecommerce_mysql:
+#     image: bc98ee8bdf64491ec5843fc595dcc3dbce44f5d3e99a0711d3526813b6d70144
+#     ports:
+#     - "3306:3306"
+#     volumes:
+#     - $HOME/docker/volumnes/mariadb:/var/lib/mariadb/data
+#     environment:
+#       MYSQL_ROOT_PASSWORD: Tungpro123@
+#       MYSQL_USER: Tung
+#       MYSQL_PASSWORD: Tungpro123@
+#       MYSQL_DATABASE: e-commerce
+#   ecommerce_backend:
+#     build: .
+#     volumes:
+#       - .:/home/ecommerce_backend
+#     ports:
+#       - "5001:5001"
+#     environment:
+#       - DATABASE_URI=root:Tungpro123@@tcp(172.17.0.2:3306)/e-commerce?parseTime=true"
+#       - REDIS_URI=my-redis:6379
+#     command: ["go run main.go"]
+#     depends_on:
+#       - ecommerce_mysql
+#     tty: true
+#     stdin_open: true
+# networks:
+#   fd-network:
+#     driver: bridge

@@ -1,0 +1,47 @@
+<!doctype html>
+<html>
+<head>
+    <title>Demo socket 200lab</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.4.8/socket.io.js"></script>
+</head>
+<body>
+    <div id="main">
+        <h1>Demo Socket IO</h1>
+    </div>
+
+    <script>
+        const socket = io("", {transports: ['websocket']});
+
+        socket.on('connect', () => {
+            console.log('Client connected');
+            
+            // Emit a simple message to the server
+            socket.emit('test', 'Hello server');
+            
+            // Emit a notice event with a name and age
+            socket.emit('notice', { name: "Viet Tran", age: 32 });
+            
+            // Emit an authentication token
+            socket.emit('Authenticate', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjp7InVzZXJfaWQiOjMsInJvbGUiOiJ1c2VyIn0sImV4cCI6MTcxOTg4Njc0NywiaWF0IjoxNzE3Mjk0NzQ3fQ.HOY4EVEoxo3rjKsJa0sVLK7pjzd-SfmRK6fnWN-jAwo');
+
+            // Emit user location every 3 seconds
+            setInterval(() => {
+                socket.emit('UserUpdateLocation', { lat: 10.7900422, lng: 106.6623443 });
+            }, 3000);
+        });
+
+        socket.on('test', (msg) => console.log("test:",msg));
+
+        socket.on('TopicOrderCreated', (msg) => console.log("TopicOrderCreated:",msg));
+
+        socket.on('Authenticate', (msg) => console.log(msg));
+
+        socket.on('your_profile', (msg) => console.log('your profile:', msg));
+
+        socket.on('authentication_failed', (msg) => console.log('authentication_failed:', msg));
+
+        socket.on('TopicNoteCreated', (note) => console.log('TopicNoteCreated:', note));
+        socket.on('disconnect', () => console.log('Client disconnected'));
+    </script>
+</body>
+</html>
