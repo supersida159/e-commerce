@@ -10,6 +10,7 @@ import (
 
 	"github.com/supersida159/e-commerce/api-services/common"
 	entities_carts "github.com/supersida159/e-commerce/api-services/src/cart/entities_cart"
+	"github.com/supersida159/e-commerce/api-services/src/product/entities_product"
 	"github.com/supersida159/e-commerce/api-services/src/users/entities_user"
 )
 
@@ -20,18 +21,19 @@ const (
 type Order struct {
 	common.SQLModel `json:",inline"` // Inline embedding of common.SQLModel struct
 	UserOrderID     int              `gorm:"column:user_order_id" json:"-"`
+	BusinessID      string           `gorm:"uniqueIndex;not null" json:"business_id"` // UUID for distributed systems, this is using for kafka
 
 	// User-facing fields
-	CustomerName  string `gorm:"column:customer_name" json:"customer_name"`   // Name of the customer
-	CustomerPhone string `gorm:"column:customer_phone" json:"customer_phone"` // Phone number of the customer
-	// Products      []*entities_product.CartItem `gorm:"column:products;type:json;references:ID" json:"products"` // Slice of ProductQuantity structs representing the products in the order (removed unnecessary `json` tag)
-	Cart       *entities_carts.Cart   `gorm:"foreignKey:CartID" json:"cart"`
-	CartID     int                    `gorm:"column:cart_id" json:"cart_id"`        // ID of the cart associated with the order
-	Shipping   ShippingInfo           `gorm:"embedded" json:"shipping"`             // Embedded ShippingInfo struct representing shipping details
-	OrderTotal float64                `gorm:"column:order_total" json:"orderTotal"` // Total order cost
-	Notes      string                 `gorm:"column:notes" json:"notes"`
-	AddressID  int                    `gorm:"column:address_id;default:1" json:"address_id"` // Notes or comments related to the order
-	Address    *entities_user.Address `gorm:"foreignKey:AddressID" json:"address"`           // Address where the order should be delivered
+	CustomerName  string                       `gorm:"column:customer_name" json:"customer_name"`               // Name of the customer
+	CustomerPhone string                       `gorm:"column:customer_phone" json:"customer_phone"`             // Phone number of the customer
+	Products      []*entities_product.CartItem `gorm:"column:products;type:json;references:ID" json:"products"` // Slice of ProductQuantity structs representing the products in the order (removed unnecessary `json` tag)
+	Cart          *entities_carts.Cart         `gorm:"foreignKey:CartID" json:"cart"`
+	CartID        int                          `gorm:"column:cart_id" json:"cart_id"`        // ID of the cart associated with the order
+	Shipping      ShippingInfo                 `gorm:"embedded" json:"shipping"`             // Embedded ShippingInfo struct representing shipping details
+	OrderTotal    float64                      `gorm:"column:order_total" json:"orderTotal"` // Total order cost
+	Notes         string                       `gorm:"column:notes" json:"notes"`
+	AddressID     int                          `gorm:"column:address_id;default:1" json:"address_id"` // Notes or comments related to the order
+	Address       *entities_user.Address       `gorm:"foreignKey:AddressID" json:"address"`           // Address where the order should be delivered
 	// Internal field (optional)
 	OrderCancelled bool `gorm:"column:order_cancelled;default:false" json:"order_cancelled"` // Indicates if the order has been cancelled (consider moving this to a separate "OrderState" struct)
 }

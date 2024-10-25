@@ -7,36 +7,41 @@ import (
 	"strconv"
 
 	"github.com/supersida159/e-commerce/api-services/common"
+	generic_business "github.com/supersida159/e-commerce/api-services/common/generics/business"
 	"github.com/supersida159/e-commerce/api-services/pkg/pubsub"
 	"github.com/supersida159/e-commerce/api-services/pkg/redis"
-	usecase_carts "github.com/supersida159/e-commerce/api-services/src/cart/usecase_cart"
 	entities_orders "github.com/supersida159/e-commerce/api-services/src/order/entities_order"
 )
 
-type CreateOrderStore interface {
-	CreateOrder(ctx context.Context, data *entities_orders.Order) *common.AppError
-	// OrderCancelled(ctx context.Context, Id string) *common.AppError
+type ExtendedOrderStorage interface {
+	generic_business.Storage[entities_orders.Order]
+	// CreateOrderStore(ctx context.Context, data *entities_orders.Order) *common.AppError
 }
 
-type createOrderBiz struct {
-	storeOrder CreateOrderStore
-	storeCart  usecase_carts.CreateCartStore
-	pubsub     pubsub.PubSub
-	rdb        redis.RedisWRealStore
+// type CreateOrderStore interface {
+// 	CreateOrder(ctx context.Context, data *entities_orders.Order) *common.AppError
+// 	// OrderCancelled(ctx context.Context, Id string) *common.AppError
+// }
+
+type OrderBiz struct {
+	*generic_business.GenericsService[entities_orders.Order]
+	store  ExtendedOrderStorage
+	pubsub pubsub.PubSub
+	rdb    redis.RedisWRealStore
 }
 
-func NewCreateOrderBiz(storeOrder CreateOrderStore, storeCart usecase_carts.CreateCartStore, pubsub pubsub.PubSub, rdb redis.RedisWRealStore) *createOrderBiz {
-	return &createOrderBiz{
-		storeOrder: storeOrder,
-		storeCart:  storeCart,
-		pubsub:     pubsub,
-		rdb:        rdb,
+func NewOrderBiz(store ExtendedOrderStorage, pubsub pubsub.PubSub, rdb redis.RedisWRealStore) *OrderBiz {
+	return &OrderBiz{
+		GenericsService: generic_business.NewGenericsService[entities_orders.Order](store),
+		store:           store,
+		pubsub:          pubsub,
+		rdb:             rdb,
 	}
 }
 
-func (biz *createOrderBiz) CreateOrderBiz(ctx context.Context, data *entities_orders.Order) *common.AppError {
+func (biz *OrderBiz) CreateOrderBiz(ctx context.Context, data *entities_orders.Order) *common.AppError {
 
-	err := biz.storeOrder.CreateOrder(ctx, data)
+	_, err := biz.store.Save(ctx, data)
 	if err != nil {
 		return common.ErrDB(err)
 	}

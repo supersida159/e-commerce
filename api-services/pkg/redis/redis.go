@@ -15,7 +15,9 @@ import (
 )
 
 const (
-	Timeout = 10
+	Timeout       = 10 * time.Second
+	LockTimeout   = 5 * time.Second // Duration for how long the lock is held
+	LockRetryTime = 100 * time.Millisecond
 )
 
 // IRedis interface
@@ -52,7 +54,7 @@ type RealStore interface {
 
 // NewRedis Redis interface with config
 func NewRedis(config Config, realStore RealStore) *RedisWRealStore {
-	ctx, cancel := context.WithTimeout(context.Background(), Timeout*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
 	defer cancel()
 
 	rdb := goredis.NewClient(&goredis.Options{
@@ -92,7 +94,7 @@ func (r *RedisWRealStore) FindUser(ctx context.Context, condition map[string]int
 	return userInRealStore, nil
 }
 func (r *RedisWRealStore) IsConnected() bool {
-	ctx, cancel := context.WithTimeout(context.Background(), Timeout*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
 	defer cancel()
 
 	if r.Client == nil {
@@ -107,7 +109,7 @@ func (r *RedisWRealStore) IsConnected() bool {
 }
 
 func (r *RedisWRealStore) Get(key string, value interface{}) error {
-	ctx, cancel := context.WithTimeout(context.Background(), Timeout*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
 	defer cancel()
 
 	strValue, err := r.Client.Get(ctx, key).Result()
@@ -124,7 +126,7 @@ func (r *RedisWRealStore) Get(key string, value interface{}) error {
 }
 
 func (r *RedisWRealStore) SetWithExpiration(key string, value interface{}, expiration time.Duration) error {
-	ctx, cancel := context.WithTimeout(context.Background(), Timeout*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
 	defer cancel()
 
 	bData, _ := json.Marshal(value)
@@ -137,7 +139,7 @@ func (r *RedisWRealStore) SetWithExpiration(key string, value interface{}, expir
 }
 
 func (r *RedisWRealStore) Set(key string, value interface{}) error {
-	ctx, cancel := context.WithTimeout(context.Background(), Timeout*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
 	defer cancel()
 
 	bData, _ := json.Marshal(value)
@@ -150,7 +152,7 @@ func (r *RedisWRealStore) Set(key string, value interface{}) error {
 }
 
 func (r *RedisWRealStore) Remove(keys ...string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), Timeout*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
 	defer cancel()
 
 	err := r.Client.Del(ctx, keys...).Err()
@@ -162,7 +164,7 @@ func (r *RedisWRealStore) Remove(keys ...string) error {
 }
 
 func (r *RedisWRealStore) Keys(pattern string) ([]string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), Timeout*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
 	defer cancel()
 
 	keys, err := r.Client.Keys(ctx, pattern).Result()
@@ -189,4 +191,30 @@ func (r *RedisWRealStore) RemovePattern(pattern string) error {
 	}
 
 	return nil
+}
+
+// LockKey locks a key with a specific timeout to avoid deadlocks
+func (r *RedisWRealStore) LockKey(ctx context.Context, key string) error {
+	for {
+		ok, err := r.Client.SetNX(ctx, key+"_lock", "locked", LockTimeout).Result()
+		if err != nil {
+			return err
+		}
+		if ok {
+			return nil // Lock acquired
+		}
+
+		// Wait for a short period before retrying
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("context canceled while trying to acquire lock on %s", key)
+		case <-time.After(LockRetryTime):
+		}
+	}
+}
+
+// UnlockKey unlocks the specified key
+func (r *RedisWRealStore) UnlockKey(ctx context.Context, key string) error {
+	_, err := r.Client.Del(ctx, key+"_lock").Result()
+	return err
 }
