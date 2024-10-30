@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/IBM/sarama"
+	"github.com/supersida159/e-commerce/api-services/pkg/app_context"
+	"github.com/supersida159/e-commerce/api-services/pkg/kafka/producers"
 	"github.com/supersida159/e-commerce/api-services/pkg/kafka/saga"
 	entities_orders "github.com/supersida159/e-commerce/api-services/src/order/entities_order"
 )
@@ -21,12 +23,12 @@ type SagaStep struct {
 }
 
 // servicesID for consumer
-type ServicesID string
+type ConsumerServicesID string
 
 const (
-	OrderCreated ServicesID = "CREATE_ORDER_SAGA"
-	UpdateSaga   ServicesID = "UPDATE_SAGA"
-	Rollback     ServicesID = "ROLLBACK"
+	OrderCreated ConsumerServicesID = "CREATE_ORDER_SAGA"
+	UpdateSaga   ConsumerServicesID = "UPDATE_SAGA"
+	Rollback     ConsumerServicesID = "UPDATE_ROLLBACK"
 )
 
 // // OrderSagaState tracks the state of an order throughout the saga
@@ -39,35 +41,20 @@ const (
 // }
 
 // EventHandler defines the interface for handling different types of events
-type EventHandler interface {
-	HandleOrderCreated(ctx context.Context, event *entities_orders.OrderEvent) error
-	HandleUpdateSagaTracker(ctx context.Context, event *entities_orders.OrderEvent) error
-	HandleRollback(ctx context.Context, event *entities_orders.OrderEvent) error
-	PublishToService(ctx context.Context, serviceID string, event *entities_orders.OrderEvent) error
-}
 
 // OrderConsumer structure for consuming order-related events
 type OrderConsumer struct {
-	consumer     sarama.Consumer
-	producer     producers.OrderProducer
-	eventHandler EventHandler
-	SagaStruct   saga.Orchestrator
-	topics       map[producers.ServiceID]string
-	ready        chan bool
-	stopChan     chan struct{}
-	wg           sync.WaitGroup
-	stateMutex   sync.RWMutex // Protect saga states map
+	consumer   sarama.Consumer
+	Producer   producers.OrderProducer
+	SagaStruct saga.Orchestrator
+	topics     map[producers.ServiceID]string
+	ready      chan bool
+	stopChan   chan struct{}
+	wg         sync.WaitGroup
+	stateMutex sync.RWMutex // Protect saga states map
 }
 
-// ConsumerConfig holds the configuration for the consumer
-type ConsumerConfig struct {
-	Brokers      []string
-	Topics       map[producers.ServiceID]string
-	GroupID      string
-	EventHandler EventHandler
-}
-
-func NewOrderConsumer(config ConsumerConfig) (*OrderConsumer, error) {
+func NewOrderConsumer(config producers.ConsumerProducerConfig, orderProducer producers.OrderProducer, appCtx app_context.Appcontext) (*OrderConsumer, error) {
 	saramaConfig := sarama.NewConfig()
 	saramaConfig.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategyRoundRobin
 	saramaConfig.Consumer.Offsets.Initial = sarama.OffsetNewest
@@ -79,22 +66,23 @@ func NewOrderConsumer(config ConsumerConfig) (*OrderConsumer, error) {
 		return nil, fmt.Errorf("failed to create consumer: %w", err)
 	}
 
-	// Create producer
-	saramaProducer, err := sarama.NewSyncProducer(config.Brokers, saramaConfig)
-	orderProducer := producers.NewOrderProducer(saramaProducer)
+	// // Create producer
+	// saramaProducer, err := sarama.NewSyncProducer(config.Brokers, saramaConfig)
+	// orderProducer := producers.NewOrderProducer(saramaProducer)
 
 	if err != nil {
 		consumer.Close()
 		return nil, fmt.Errorf("failed to create producer: %w", err)
 	}
+	sagaStruct := saga.NewOrchestrator(&orderProducer, appCtx)
 
 	return &OrderConsumer{
-		consumer:     consumer,
-		producer:     *orderProducer,
-		eventHandler: config.EventHandler,
-		topics:       config.Topics,
-		ready:        make(chan bool),
-		stopChan:     make(chan struct{}),
+		consumer:   consumer,
+		Producer:   orderProducer,
+		SagaStruct: *sagaStruct,
+		topics:     config.Topics,
+		ready:      make(chan bool),
+		stopChan:   make(chan struct{}),
 	}, nil
 }
 
@@ -126,99 +114,87 @@ func (c *OrderConsumer) Stop() error {
 }
 
 func (c *OrderConsumer) consumeTopic(ctx context.Context, topic string) {
-	// Create partitionConsumer for the topic
+	// Get all partitions for the topic
 	partitions, err := c.consumer.Partitions(topic)
 	if err != nil {
-		log.Printf("Failed to get partitions for topic %s: %v", topic, err)
+		log.Printf("failed to get partitions for topic %s: %v", topic, err)
 		return
 	}
 
 	for _, partition := range partitions {
-		pc, err := c.consumer.ConsumePartition(topic, partition, sarama.OffsetNewest)
+		partitionConsumer, err := c.consumer.ConsumePartition(topic, partition, sarama.OffsetNewest)
 		if err != nil {
-			log.Printf("Failed to start consumer for topic %s partition %d: %v", topic, partition, err)
+			log.Printf("failed to consume partition %d of topic %s: %v", partition, topic, err)
 			continue
 		}
 
-		defer pc.Close()
+		defer partitionConsumer.Close()
 
-		// Start consuming messages
 		for {
 			select {
-			case msg := <-pc.Messages():
-				if err := c.handleMessage(ctx, msg); err != nil {
-					log.Printf("Error handling message: %v", err)
-				}
-
-			case err := <-pc.Errors():
-				log.Printf("Error from consumer: %v", err)
-
+			case msg := <-partitionConsumer.Messages():
+				// Process each message
+				c.processMessage(ctx, msg)
 			case <-c.stopChan:
 				return
-
 			case <-ctx.Done():
 				return
 			}
 		}
 	}
 }
-
-func (c *OrderConsumer) handleMessage(ctx context.Context, msg *sarama.ConsumerMessage) error {
+func (c *OrderConsumer) processMessage(ctx context.Context, msg *sarama.ConsumerMessage) {
 	var event entities_orders.OrderEvent
 	if err := json.Unmarshal(msg.Value, &event); err != nil {
-		return fmt.Errorf("failed to unmarshal message: %w", err)
+		log.Printf("failed to unmarshal message: %v", err)
+		return
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel()
+	log.Printf("Received event for saga %s: %s", event.SagaID, event.EventType)
 
-	if msg.Topic == "CREATE_ORDER_SAGA" {
-		return c.handleCreateOrderSaga(ctx, &event)
-	} else if msg.Topic == "UPDATE_SAGA_TRACKER" {
-		return c.handleUpdateSagaTracker(ctx, &event)
-	} else if msg.Topic == "ROLLBACK" {
-		return c.handleRollback(ctx, &event)
-	}
-}
-
-func (c *OrderConsumer) handleCreateOrderSaga(ctx context.Context, event *entities_orders.OrderEvent) error {
-
-	return c.SagaStruct.HandleCreateOrderSaga(ctx, *event)
-}
-
-func (c *OrderConsumer) handleUpdateSagaTracker(ctx context.Context, event *entities_orders.OrderEvent) error {
-	switch event.Metadata["service"] {
-	case "orders":
-		return c.handleUpdateSagaTrackerOrders(ctx, event)
-	}
-
-	return c.updateSagaState(ctx, state)
-}
-
-func (c *OrderConsumer) handleRollback(ctx context.Context, event *entities_orders.OrderEvent) error {
-	// Reverse through completed steps and rollback each service
-	for i := state.CurrentStep - 1; i >= 0; i-- {
-		rollbackEvent := &entities_orders.OrderEvent{
-			OrderID:   event.OrderID,
-			EventType: "ROLLBACK",
-			Status:    "PENDING",
+	switch ConsumerServicesID(event.EventType) {
+	case OrderCreated:
+		if err := c.SagaStruct.StartOrderSaga(ctx, &event.Order); err != nil {
+			log.Printf("Failed to start order saga: %v", err)
 		}
-
-		if err := c.eventHandler.PublishToService(ctx, state.Steps[i].ServiceID, rollbackEvent); err != nil {
-			log.Printf("Failed to rollback step %d for order %s: %v", i, event.OrderID, err)
+	case UpdateSaga:
+		if err := c.SagaStruct.HandleServiceResponse(ctx, event); err != nil {
+			log.Printf("Failed to handle service response: %v", err)
 		}
-
-		state.Steps[i].Status = "ROLLED_BACK"
+	case Rollback:
+		if err := c.SagaStruct.HandleCompensation(ctx, event); err != nil {
+			log.Printf("Failed to handle compensation: %v", err)
+		}
+	default:
+		log.Printf("Unhandled event type: %s", event.EventType)
 	}
-
-	state.Status = "ROLLED_BACK"
-	return c.updateSagaState(ctx, state)
 }
 
-func mustMarshal(v interface{}) []byte {
-	data, err := json.Marshal(v)
-	if err != nil {
-		panic(err)
-	}
-	return data
-}
+// func (c *OrderConsumer) handleCreateOrderSaga(ctx context.Context, event *entities_orders.OrderEvent) error {
+
+// 	return c.SagaStruct.HandleCreateOrderSaga(ctx, *event)
+// }
+
+// func (c *OrderConsumer) handleUpdateSagaTracker(ctx context.Context, event *entities_orders.OrderEvent) error {
+
+// 	return c.SagaStruct.HandleUpdateOrderSaga(ctx, *event)
+// }
+
+// // // handle sent roll back to services
+// // func (c *OrderConsumer) handleSentRollback(ctx context.Context, event *entities_orders.OrderEvent) error {
+
+// // 	return c.SagaStruct.HandleRollbackOrderSaga(ctx, *event)
+// // }
+
+// // update roll back
+// func (c *OrderConsumer) handleUpdateCompensateSaga(ctx context.Context, event *entities_orders.OrderEvent) error {
+// 	return c.SagaStruct.HandleUpdateCompensateOrderSaga(ctx, *event)
+// }
+
+// func mustMarshal(v interface{}) []byte {
+// 	data, err := json.Marshal(v)
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	return data
+// }

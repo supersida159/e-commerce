@@ -38,8 +38,12 @@ const (
 	ServiceSentFailed
 	ServicePending
 	ServiceProcessing
-	ServiceCompleted
+	ServiceSendRollBackFailed
+	ServiceSuccess
+	ServiceCancelled
 	ServiceFailed
+	ServiceRollbackFailed
+	ServiceRollbackSuccess
 	ServiceCompensating
 	ServiceCompensated
 	ServiceTimedOut
@@ -121,10 +125,10 @@ func (e *OrderEvent) IsCompensating() bool {
 
 // AllServicesCompleted checks if all services have completed successfully
 func (e *OrderEvent) AllServicesCompleted() bool {
-	return e.ServiceStatus.OrderService == int(ServiceCompleted) &&
-		e.ServiceStatus.InventoryService == int(ServiceCompleted) &&
-		e.ServiceStatus.CartService == int(ServiceCompleted) &&
-		e.ServiceStatus.PaymentService == int(ServiceCompleted)
+	return e.ServiceStatus.OrderService == int(ServiceSuccess) &&
+		e.ServiceStatus.InventoryService == int(ServiceSuccess) &&
+		e.ServiceStatus.CartService == int(ServiceSuccess) &&
+		e.ServiceStatus.PaymentService == int(ServiceSuccess)
 }
 
 // AddMetadata adds metadata to the event
@@ -155,4 +159,41 @@ func CreateCompensationEvent(order *Order, failedService string, sagaID string) 
 	event.SagaID = sagaID
 	event.AddMetadata("failed_service", failedService)
 	return event
+}
+func (e *OrderEvent) AreAllServicesDone() (bool, bool) {
+	services := []int{
+		e.ServiceStatus.OrderService,
+		e.ServiceStatus.InventoryService,
+		e.ServiceStatus.CartService,
+	}
+	isSuccess := true
+
+	for _, service := range services {
+		// Check if the service is not in either ServiceFailed or ServiceCompleted state
+		if service != int(ServiceFailed) && service != int(ServiceSuccess) {
+			return false, false // Return false if any service is still in progress
+		}
+		if service == int(ServiceFailed) {
+			isSuccess = false
+		}
+	}
+
+	return true, isSuccess // All services are either failed or completed
+}
+
+func (e *OrderEvent) AreAllCompensationsDone() bool {
+	services := []int{
+		e.ServiceStatus.OrderService,
+		e.ServiceStatus.InventoryService,
+		e.ServiceStatus.CartService,
+	}
+
+	for _, service := range services {
+		// Check if the service is not in either ServiceFailed or ServiceCompleted state
+		if service != int(ServiceRollbackFailed) && service != int(ServiceRollbackSuccess) {
+			return false // Return false if any service is still in progress
+		}
+
+	}
+	return true
 }

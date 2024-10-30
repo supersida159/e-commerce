@@ -20,6 +20,8 @@ const (
 	LockRetryTime = 100 * time.Millisecond
 )
 
+var ErrKeyLocked = fmt.Errorf("key is already locked")
+
 // IRedis interface
 //
 //go:generate mockery --name=IRedis

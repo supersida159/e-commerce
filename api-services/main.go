@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -11,6 +12,8 @@ import (
 	"github.com/supersida159/e-commerce/api-services/pkg/config"
 	dbs "github.com/supersida159/e-commerce/api-services/pkg/db"
 	"github.com/supersida159/e-commerce/api-services/pkg/goroutineinmain"
+	"github.com/supersida159/e-commerce/api-services/pkg/kafka/consumer"
+	"github.com/supersida159/e-commerce/api-services/pkg/kafka/producers"
 	"github.com/supersida159/e-commerce/api-services/pkg/pubsub/pubsublocal"
 	"github.com/supersida159/e-commerce/api-services/pkg/redis"
 	"github.com/supersida159/e-commerce/api-services/pkg/skio"
@@ -58,7 +61,37 @@ func main() {
 	connectRedis := cache.IsConnected()
 	fmt.Println("connect redis:", connectRedis)
 	localpubsub := pubsublocal.NewPubSub()
-	appctx := app_context.NewAppContext(db, localpubsub, cache)
+	// Define Kafka consumer configuration
+	kafkaconsumerConfig := producers.ConsumerProducerConfig{
+		Brokers: []string{"localhost:9092"}, // Replace with your Kafka brokers
+		Topics: map[producers.ServiceID]string{
+			producers.ServiceID("CREATE_ORDER_SAGA"):   "CREATE_ORDER_SAGA",
+			producers.ServiceID("UPDATE_SAGA_TRACKER"): "UPDATE_SAGA_TRACKER",
+			producers.ServiceID("UPDATE_ROLLBACK"):     "UPDATE_ROLLBACK",
+		},
+		GroupID: "order-service-group",
+	}
+	// Define Kafka producer configuration
+	kafkaproducermConfig := producers.ConsumerProducerConfig{
+		Brokers: []string{"localhost:9092"}, // Replace with your Kafka brokers
+		Topics: map[producers.ServiceID]string{
+			producers.ServiceID("Saga"):      "Saga",
+			producers.ServiceID("Order"):     "Order",
+			producers.ServiceID("Inventory"): "Inventory",
+			producers.ServiceID("Cart"):      "Cart",
+			producers.ServiceID("Central"):   "Central",
+		},
+		GroupID: "order-service-group",
+	}
+
+	orderproducer := producers.NewOrderProducer(kafkaproducermConfig)
+	appctx := app_context.NewAppContext(db, localpubsub, cache, orderproducer)
+
+	// Create the consumer
+	orderConsumer, err := consumer.NewOrderConsumer(kafkaconsumerConfig, *orderproducer, appctx)
+	if err != nil {
+		log.Fatalf("Failed to create consumer: %v", err)
+	}
 
 	err = goroutineinmain.RunExpireOrder(appctx)
 	if err != nil {
@@ -76,6 +109,15 @@ func main() {
 	httpSvr.GetEngine().Use(CORSMiddleware())
 	if err = httpSvr.Run(rtengine); err != nil {
 		logrus.Fatal(" Cannot runHttp server", err)
+	}
+
+	// Create a context that we can cancel
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Start the consumer
+	if err := orderConsumer.Start(ctx); err != nil {
+		log.Fatalf("Failed to start consumer: %v", err)
 	}
 
 	// run below code with Grpc

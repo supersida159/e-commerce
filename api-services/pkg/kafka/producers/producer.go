@@ -1,4 +1,4 @@
-package producer
+package producers
 
 import (
 	"encoding/json"
@@ -17,6 +17,7 @@ const (
 	OrderService     ServiceID = "order"
 	InventoryService ServiceID = "inventory"
 	CartService      ServiceID = "cart"
+	CentralService   ServiceID = "central"
 )
 
 // SendResult stores the result of sending a message to a service
@@ -42,10 +43,27 @@ type SendMessageOptions struct {
 	TargetServices []ServiceID
 }
 
+// ProducerConfig holds the configuration for the consumer
+type ConsumerProducerConfig struct {
+	Brokers []string
+	Topics  map[ServiceID]string
+	GroupID string
+}
+
 // NewOrderProducer creates a new instance of OrderProducer with the given Kafka producer and topics.
-func NewOrderProducer(producer sarama.SyncProducer) *OrderProducer {
+func NewOrderProducer(producerconfig ConsumerProducerConfig) *OrderProducer {
+	saramaConfig := sarama.NewConfig()
+	saramaConfig.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategyRoundRobin
+	saramaConfig.Consumer.Offsets.Initial = sarama.OffsetNewest
+	saramaConfig.Producer.Return.Successes = true // Required for sync producer
+
+	saramaProducer, err := sarama.NewSyncProducer(producerconfig.Brokers, saramaConfig)
+	if err != nil {
+		return nil
+	}
+
 	return &OrderProducer{
-		producer: producer,
+		producer: saramaProducer,
 		topics: struct {
 			OrderTopic     string
 			InventoryTopic string
