@@ -3,133 +3,210 @@ package producers
 import (
 	"encoding/json"
 	"fmt"
+	"log"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/IBM/sarama"
+	"github.com/supersida159/e-commerce/api-services/common"
+	"github.com/supersida159/e-commerce/api-services/pkg/config"
+	kafkaconfig "github.com/supersida159/e-commerce/api-services/pkg/kafka/kafka_config"
 	entities_orders "github.com/supersida159/e-commerce/api-services/src/order/entities_order"
 )
 
-// ServiceID represents different services
-type ServiceID string
-
-const (
-	SagaCentral      ServiceID = "Saga"
-	OrderService     ServiceID = "order"
-	InventoryService ServiceID = "inventory"
-	CartService      ServiceID = "cart"
-	CentralService   ServiceID = "central"
-)
-
-// SendResult stores the result of sending a message to a service
-type SendResult struct {
-	ServiceID ServiceID
-	Error     error
-}
-
-// OrderProducer structure with enhanced functionality
+// OrderProducer structure for saga pattern
 type OrderProducer struct {
 	producer sarama.SyncProducer
-	topics   struct {
-		OrderTopic     string
-		InventoryTopic string
-		CartTopic      string
-	}
 }
 
 // SendMessageOptions contains options for sending messages
 type SendMessageOptions struct {
-	// TargetServices specifies which services to send to
-	// If nil, sends to all services
-	TargetServices []ServiceID
+	TargetServices []kafkaconfig.ServiceID
+	Topic          string // Specific topic to send to
 }
 
-// ProducerConfig holds the configuration for the consumer
-type ConsumerProducerConfig struct {
-	Brokers []string
-	Topics  map[ServiceID]string
-	GroupID string
-}
-
-// NewOrderProducer creates a new instance of OrderProducer with the given Kafka producer and topics.
-func NewOrderProducer(producerconfig ConsumerProducerConfig) *OrderProducer {
+// NewOrderProducer creates a new instance of OrderProducer
+func NewOrderProducer(brokers []string, config *config.Schema) (*OrderProducer, error) {
+	// Create a new Sarama configuration object
 	saramaConfig := sarama.NewConfig()
-	saramaConfig.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategyRoundRobin
-	saramaConfig.Consumer.Offsets.Initial = sarama.OffsetNewest
-	saramaConfig.Producer.Return.Successes = true // Required for sync producer
 
-	saramaProducer, err := sarama.NewSyncProducer(producerconfig.Brokers, saramaConfig)
+	// Set producer configurations using values from config.Schema
+	saramaConfig.Producer.RequiredAcks = sarama.RequiredAcks(config.Kafka.ProducerRequiredAcks) // Use value from config.Schema
+	saramaConfig.Producer.Return.Successes = true                                               // Always return successful messages
+	saramaConfig.Producer.Retry.Max = config.Kafka.Retry                                        // Set retry attempts from config.Schema
+
+	// Optional: Set timeout from config.Schema (if provided)
+	saramaConfig.Net.DialTimeout = time.Duration(config.Kafka.Timeout) * time.Millisecond
+	saramaConfig.Net.ReadTimeout = time.Duration(config.Kafka.Timeout) * time.Millisecond
+	saramaConfig.Net.WriteTimeout = time.Duration(config.Kafka.Timeout) * time.Millisecond
+
+	// Configure TLS if enabled in config.Schema
+	if config.Kafka.EnableTLS {
+		saramaConfig.Net.TLS.Enable = true
+		// You can add custom TLS settings here (e.g., cert files, etc.)
+	}
+
+	// Create the Kafka producer using the Sarama configuration
+	producer, err := sarama.NewSyncProducer(brokers, saramaConfig)
 	if err != nil {
-		return nil
+		// Return a service unavailable error if the producer creation fails
+		return nil, common.ErrServiceUnavailable(fmt.Errorf("failed to create producer: %w", err))
 	}
 
+	// Return the OrderProducer object with the producer
 	return &OrderProducer{
-		producer: saramaProducer,
-		topics: struct {
-			OrderTopic     string
-			InventoryTopic string
-			CartTopic      string
-		}{
-			OrderTopic:     string(entities_orders.ServiceInit),
-			InventoryTopic: string(entities_orders.ServiceInit),
-			CartTopic:      string(entities_orders.ServiceInit),
-		},
-	}
+		producer: producer,
+	}, nil
 }
 
-func (p *OrderProducer) SendMessages(event entities_orders.OrderEvent, opts *SendMessageOptions) (map[ServiceID]error, error) {
+// SendCreateOrder sends an order creation event to all services
+func (p *OrderProducer) SendCreateOrder(event entities_orders.OrderEvent) *common.AppError {
+	return p.sendToTopic(event, kafkaconfig.KafkaTopics.CreateOrder)
+}
+
+// SendStatusUpdate sends a status update to the orchestrator
+func (p *OrderProducer) SendStatusUpdate(event entities_orders.OrderEvent) *common.AppError {
+	return p.sendToTopic(event, kafkaconfig.KafkaTopics.UpdateOrder)
+}
+
+// SendRollbackOrder sends rollback commands to specified services
+func (p *OrderProducer) SendRollbackOrder(event entities_orders.OrderEvent) *common.AppError {
+	return p.sendToTopic(event, kafkaconfig.KafkaTopics.RollbackOrder)
+}
+
+func (p *OrderProducer) SendRollbackInventory(event entities_orders.OrderEvent) *common.AppError {
+	return p.sendToTopic(event, kafkaconfig.KafkaTopics.RollbackInventory)
+}
+
+func (p *OrderProducer) SendRollbackCart(event entities_orders.OrderEvent) *common.AppError {
+	return p.sendToTopic(event, kafkaconfig.KafkaTopics.RollbackCart)
+}
+
+// sendToTopic sends an event to a specific topic
+func (p *OrderProducer) sendToTopic(event entities_orders.OrderEvent, topic string) *common.AppError {
 	eventJSON, err := json.Marshal(event)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal event: %w", err)
+		return common.ErrInvalidInputData(fmt.Errorf("failed to marshal event: %w", err))
 	}
 
-	// Define all available services
-	serviceTopics := map[ServiceID]string{
-		OrderService:     p.topics.OrderTopic,
-		InventoryService: p.topics.InventoryTopic,
-		CartService:      p.topics.CartTopic,
+	msg := &sarama.ProducerMessage{
+		Topic: topic,
+		Key:   sarama.StringEncoder(event.SagaID),
+		Value: sarama.StringEncoder(eventJSON),
 	}
 
-	// If no specific services are specified, send to all
-	targetServices := []ServiceID{OrderService, InventoryService, CartService}
-	if opts != nil && len(opts.TargetServices) > 0 {
-		targetServices = opts.TargetServices
+	partition, offset, err := p.producer.SendMessage(msg)
+	if err != nil {
+		return common.ErrInternalServerError(fmt.Errorf("failed to send message: %w", err))
 	}
 
-	// Create messages only for target services
-	messages := make(map[ServiceID]*sarama.ProducerMessage)
-	for _, serviceID := range targetServices {
-		if topic, exists := serviceTopics[serviceID]; exists {
-			messages[serviceID] = &sarama.ProducerMessage{
-				Topic: topic,
-				Key:   sarama.StringEncoder(event.BusinessID),
-				Value: sarama.StringEncoder(eventJSON),
+	log.Printf("Message sent to topic %s [partition: %d, offset: %d]", topic, partition, offset)
+	return nil
+}
+
+// SendToMultipleTopics sends an event to multiple topics in parallel
+func (p *OrderProducer) SendToMultipleTopics(event entities_orders.OrderEvent, topics []string) *common.AppError {
+	if len(topics) == 0 {
+		return common.ErrInvalidRequestParameter(fmt.Errorf("no topics provided"))
+	}
+
+	var wg sync.WaitGroup
+	errorsChan := make(chan *common.AppError, len(topics))
+
+	for _, topic := range topics {
+		wg.Add(1)
+		go func(t string) {
+			defer wg.Done()
+			if err := p.sendToTopic(event, t); err != nil {
+				errorsChan <- err
 			}
+		}(topic)
+	}
+
+	wg.Wait()
+	close(errorsChan)
+
+	var errors []string
+	for err := range errorsChan {
+		errors = append(errors, err.MessageEn)
+	}
+
+	if len(errors) > 0 {
+		return common.ErrInternalServerError(fmt.Errorf("multiple errors: %s", strings.Join(errors, "; ")))
+	}
+
+	return nil
+}
+
+// SendParallel sends messages to multiple services in parallel
+func (p *OrderProducer) SendParallel(event entities_orders.OrderEvent, opts SendMessageOptions) (map[kafkaconfig.ServiceID]*common.AppError, *common.AppError) {
+	eventJSON, err := json.Marshal(event)
+	if err != nil {
+		return nil, common.ErrInvalidInputData(fmt.Errorf("failed to marshal event: %w", err))
+	}
+
+	// If specific topic is provided
+	if opts.Topic != "" {
+		msg := &sarama.ProducerMessage{
+			Topic: opts.Topic,
+			Key:   sarama.StringEncoder(event.SagaID),
+			Value: sarama.StringEncoder(eventJSON),
+		}
+
+		_, _, err := p.producer.SendMessage(msg)
+		if err != nil {
+			return nil, common.ErrInternalServerError(fmt.Errorf("failed to send message to topic %s: %w", opts.Topic, err))
+		}
+		return nil, nil
+	}
+
+	// Get topic mapping
+	topicMapping := kafkaconfig.GetServiceTopicMapping()
+
+	if len(opts.TargetServices) == 0 {
+		for service := range topicMapping {
+			opts.TargetServices = append(opts.TargetServices, service)
 		}
 	}
 
-	// Send messages concurrently and collect results
 	var wg sync.WaitGroup
-	results := make(map[ServiceID]error)
+	results := make(map[kafkaconfig.ServiceID]*common.AppError)
 	var resultsLock sync.Mutex
 
-	for serviceID, msg := range messages {
+	for _, serviceID := range opts.TargetServices {
 		wg.Add(1)
-		go func(sID ServiceID, message *sarama.ProducerMessage) {
+		go func(sID kafkaconfig.ServiceID) {
 			defer wg.Done()
 
-			_, _, err := p.producer.SendMessage(message)
+			topics, exists := topicMapping[sID]
+			if !exists || len(topics) == 0 {
+				resultsLock.Lock()
+				results[sID] = common.ErrResourceNotFound(fmt.Errorf("no topic mapping found for service %s", sID))
+				resultsLock.Unlock()
+				return
+			}
+
+			msg := &sarama.ProducerMessage{
+				Topic: topics[0],
+				Key:   sarama.StringEncoder(event.SagaID),
+				Value: sarama.StringEncoder(eventJSON),
+			}
+
+			_, _, err := p.producer.SendMessage(msg)
 
 			resultsLock.Lock()
-			results[sID] = err
+			if err != nil {
+				results[sID] = common.ErrInternalServerError(err)
+			}
 			resultsLock.Unlock()
-		}(serviceID, msg)
+		}(serviceID)
 	}
 
-	// Wait for all goroutines to complete
 	wg.Wait()
 
-	// Check if any service failed
-	var hasError bool
+	// Check for errors
+	hasError := false
 	for _, err := range results {
 		if err != nil {
 			hasError = true
@@ -138,20 +215,16 @@ func (p *OrderProducer) SendMessages(event entities_orders.OrderEvent, opts *Sen
 	}
 
 	if hasError {
-		return results, fmt.Errorf("some services failed to receive messages")
+		return results, common.ErrInternalServerError(fmt.Errorf("some services failed to receive messages"))
 	}
 
 	return results, nil
 }
 
-// Example usage functions:
-
-func (p *OrderProducer) SendToAllServices(event entities_orders.OrderEvent) (map[ServiceID]error, error) {
-	return p.SendMessages(event, nil)
-}
-
-func (p *OrderProducer) SendRollbackToSuccessfulServices(event entities_orders.OrderEvent, successfulServices []ServiceID) (map[ServiceID]error, error) {
-	return p.SendMessages(event, &SendMessageOptions{
-		TargetServices: successfulServices,
-	})
+// Close closes the producer
+func (p *OrderProducer) Close() *common.AppError {
+	if err := p.producer.Close(); err != nil {
+		return common.ErrInternalServerError(fmt.Errorf("failed to close producer: %w", err))
+	}
+	return nil
 }

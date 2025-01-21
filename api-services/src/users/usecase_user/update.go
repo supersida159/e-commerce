@@ -15,11 +15,11 @@ type UpdateStorage interface {
 
 type UpdateBusiness struct {
 	storeUser UpdateStorage
-	appCtx    app_context.Appcontext
+	appCtx    app_context.AppContext
 	hasher    Hasher
 }
 
-func NewUpdateBusiness(appCtx app_context.Appcontext, storeUser UpdateStorage, hasher Hasher) *UpdateBusiness {
+func NewUpdateBusiness(appCtx app_context.AppContext, storeUser UpdateStorage, hasher Hasher) *UpdateBusiness {
 	return &UpdateBusiness{
 		appCtx:    appCtx,
 		storeUser: storeUser,
@@ -32,17 +32,17 @@ func (b *UpdateBusiness) UpdateUser(ctx context.Context, data *entities_user.Use
 
 	oldData, err := b.storeUser.FindUser(ctx, map[string]interface{}{"id": data.ID})
 	if err != nil {
-		return common.ErrCannotGetEntity(entities_user.UserRoloUser.String(), err)
+		return common.ErrInternalServerError(err)
 	}
 	if data.NewPassword != "" {
 		if data.Password != "" {
 			if data.NewPassword == data.Password {
-				return common.NewErrInvalidPassword()
+				return common.ErrWrongPasswordOrUsername()
 			}
 
 			data.Password = b.hasher.Hash(data.Password + oldData.Salt)
 			if data.Password != oldData.Password {
-				return common.NewErrInvalidPassword()
+				return common.ErrWrongPasswordOrUsername()
 			}
 			salt := common.GenSalt(50)
 
@@ -51,7 +51,7 @@ func (b *UpdateBusiness) UpdateUser(ctx context.Context, data *entities_user.Use
 			data.Salt = salt
 
 		} else {
-			return common.NewErrInvalidPassword()
+			return common.ErrWrongPasswordOrUsername()
 		}
 	} else {
 		data.Password = ""

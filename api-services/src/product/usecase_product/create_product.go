@@ -28,7 +28,7 @@ func (biz *createProductBiz) CreateProductBiz(
 	data *entities_product.Product) error {
 
 	if err := biz.store.CreateProduct(ctx, data); err != nil {
-		return common.ErrCannotCreateEntity(entities_product.EntityName, err)
+		return common.ErrDB(err)
 	}
 	return nil
 

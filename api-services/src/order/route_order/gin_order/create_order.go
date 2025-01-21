@@ -7,58 +7,68 @@ import (
 	"github.com/supersida159/e-commerce/api-services/common"
 	response "github.com/supersida159/e-commerce/api-services/common/responese"
 	"github.com/supersida159/e-commerce/api-services/pkg/app_context"
-	repository_carts "github.com/supersida159/e-commerce/api-services/src/cart/repository_cart"
+	"github.com/supersida159/e-commerce/api-services/pkg/kafka/saga"
 	"github.com/supersida159/e-commerce/api-services/src/order/DTO/order_request"
-	"github.com/supersida159/e-commerce/api-services/src/order/DTO/order_response"
 	entities_orders "github.com/supersida159/e-commerce/api-services/src/order/entities_order"
-	"github.com/supersida159/e-commerce/api-services/src/order/repository_orders"
 	usecase_orders "github.com/supersida159/e-commerce/api-services/src/order/usecase_order"
 )
 
-func CreateOrderHandler(appCtx app_context.Appcontext) func(c *gin.Context) {
-
+func CreateOrderHandler(appCtx app_context.AppContext) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var data order_response.OrderResponse
-		var order entities_orders.Order
-		var reqData order_request.CreateOrderRequest
+		var (
+			reqData order_request.CreateOrderRequest
+			order   entities_orders.Order
+		)
 
 		userContext := c.MustGet(common.CurrentUser).(common.Requester)
 
-		storeOrder := repository_orders.NewSQLStore(appCtx.GetMainDBConnection())
-		storeCart := repository_carts.NewSQLStore(appCtx.GetMainDBConnection())
-		biz := usecase_orders.NewCreateOrderBiz(storeOrder,storeCart, appCtx.GetPubSub(), *appCtx.GetCache())
+		// Initialize the saga orchestrator
+		producer := appCtx.GetProducer()
+		orchestrator := saga.NewOrchestrator(producer, appCtx)
 
+		// Initialize order business with proper configuration
+		bizConfig := usecase_orders.OrderBusinessConfig{
+			Producer:     producer,
+			Orchestrator: orchestrator,
+		}
+
+		biz, err := usecase_orders.NewOrderBusiness(bizConfig)
+		if err != nil {
+			response.BuildErrorGinResponse(c, common.ErrInternalServerError(err))
+			return
+		}
+
+		// Bind and validate request data
 		if err := c.ShouldBindJSON(&reqData); err != nil {
 			response.BuildErrorGinResponse(c, common.ErrJSONBlindding(err))
 			return
 		}
+
 		validator := common.NewValidator()
 		if appError := validator.ValidateStruct(reqData); appError != nil {
 			response.BuildErrorGinResponse(c, appError)
 			return
 		}
 
+		// Convert request to order entity
 		order = ConvertPlaceOrderReqToOrder(reqData)
 		order.UserOrderID = userContext.GetUserID()
 
-		if err := biz.CreateOrderBiz(c.Request.Context(), &order); err != nil {
-			c.JSON(http.StatusBadRequest, err)
+		// Create order through the business layer
+		if err := biz.CreateOrder(c.Request.Context(), &order); err != nil {
+			response.BuildErrorGinResponse(c, err)
 			return
 		}
 
+		// Mask sensitive data and prepare response
 		order.Mask(true)
 
-		//add convert to response
-
-		c.JSON(http.StatusOK, common.SimpleSuccessResponse(data.FakeId))
-		response.BuildSuccessGinResponse(c, data.FakeId)
+		// Return success response
+		c.JSON(http.StatusOK, common.SimpleSuccessResponse(&order))
 	}
-
 }
 
 func ConvertPlaceOrderReqToOrder(placeOrderReq order_request.CreateOrderRequest) entities_orders.Order {
-	// Add appropriate initialization or mapping for UserOrderID, Shipping, OrderTotal, Notes, and OrderCancelled
-	// Add any additional mapping or initialization logic for new fields
 	return entities_orders.Order{
 		CustomerName:   placeOrderReq.CustomerName,
 		CustomerPhone:  placeOrderReq.CustomerPhone,

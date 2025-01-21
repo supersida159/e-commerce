@@ -21,7 +21,7 @@ func (s *sqlStore) FindUser(ctx context.Context, conditions map[string]interface
 	if err := s.db.Where(conditions).Preload("Address").First(&user).Error; err != nil {
 		db.Rollback()
 		if err == gorm.ErrRecordNotFound {
-			return nil, common.RecordNotFound
+			return nil, common.ErrResourceNotFound(err)
 		}
 		return nil, common.ErrDB(err)
 	}

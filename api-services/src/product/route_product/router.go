@@ -7,7 +7,7 @@ import (
 	gin_product "github.com/supersida159/e-commerce/api-services/src/product/route_product/gin_product"
 )
 
-func Routes(r *gin.RouterGroup, appCtx app_context.Appcontext) {
+func Routes(r *gin.RouterGroup, appCtx app_context.AppContext) {
 	r.POST("/list", gin_product.ListProducts(appCtx))
 	r.GET("/getProduct/:name", gin_product.GetProductHandler(appCtx))
 	// r.POST("/register", gin_user.Register(appCtx))

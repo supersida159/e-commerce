@@ -1,177 +1,192 @@
 package usecase_orders
 
-import (
-	"context"
-	"fmt"
-	"time"
+// import (
+// 	"context"
+// 	"fmt"
+// 	"time"
 
-	"github.com/supersida159/e-commerce/api-services/pkg/kafka/producers"
-	entities_orders "github.com/supersida159/e-commerce/api-services/src/order/entities_order"
-)
+// 	"github.com/supersida159/e-commerce/api-services/common"
+// 	"github.com/supersida159/e-commerce/api-services/pkg/kafka/producers"
+// 	"github.com/supersida159/e-commerce/api-services/pkg/kafka/saga"
+// 	entities_orders "github.com/supersida159/e-commerce/api-services/src/order/entities_order"
+// )
 
-// OrderStatus represents the current state of the order in the saga
-type OrderStatus int
+// // OrderStatus represents the current state of the order in the saga
+// type OrderStatus int
 
-const (
-	OrderStatusCancelled OrderStatus = iota
-	OrderStatusCreated
-	OrderStatusPending
-	OrderStatusFailed
-	OrderStatusCompleted
-)
+// const (
+// 	OrderStatusNew OrderStatus = iota
+// 	OrderStatusPending
+// 	OrderStatusProcessing
+// 	OrderStatusFailed
+// 	OrderStatusCancelled
+// 	OrderStatusCompleted
+// )
 
-type OrderBusiness struct {
-	orderProducer *producers.OrderProducer
-	timeout       time.Duration
-}
+// const (
+// 	defaultTimeout = 10 * time.Second
+// 	maxRetries     = 3
+// )
 
-func NewOrderBusiness(producer *producers.OrderProducer) *OrderBusiness {
-	return &OrderBusiness{
-		orderProducer: producer,
-		timeout:       10 * time.Second,
-	}
-}
+// // OrderBusiness handles order-related business logic
+// type OrderBusiness struct {
+// 	orderProducer *producers.OrderProducer
+// 	orchestrator  *saga.Orchestrator
+// 	timeout       time.Duration
+// }
 
-// CreateOrder initiates the order creation saga
-func (b *OrderBusiness) CreateOrder(ctx context.Context, order *entities_orders.Order) error {
-	ctx, cancel := context.WithTimeout(ctx, b.timeout)
-	defer cancel()
+// // OrderBusinessConfig holds configuration for OrderBusiness
+// type OrderBusinessConfig struct {
+// 	Producer     *producers.OrderProducer
+// 	Timeout      time.Duration
+// 	Orchestrator *saga.Orchestrator
+// }
 
-	// Set initial order status
-	order.Status = int(OrderStatusPending)
-
-	// Create saga start event
-	sagaID := fmt.Sprintf("saga_%d_%d", order.ID, time.Now().UnixNano())
-	event := entities_orders.CreateSagaStartEvent(order, sagaID)
-	event.UpdateServiceStatus("order", entities_orders.ServicePending)
-
-	// Send to saga service first
-	opts := &producers.SendMessageOptions{
-		TargetServices: []producers.ServiceID{producers.SagaCentral},
-	}
-
-	_, err := b.orderProducer.SendMessages(event, opts)
-	if err != nil {
-		// Update order status to FAILED if we couldn't send the message
-		order.Status = int(OrderStatusFailed)
-		return fmt.Errorf("failed to initiate order saga: %w", err)
-	}
-
-	return nil
-}
-
-// // ProcessInventoryReservation handles the inventory reservation step
-// func (b *OrderBusiness) ProcessInventoryReservation(ctx context.Context, order *entities_orders.Order, sagaID string) error {
-// 	event := entities_orders.CreateServiceEvent(order, entities_orders.EventInventoryRequested, sagaID, 2)
-// 	event.UpdateServiceStatus("inventory", entities_orders.ServicePending)
-
-// 	opts := &producer.SendMessageOptions{
-// 		TargetServices: []producer.ServiceID{producer.InventoryService},
+// // NewOrderBusiness creates a new instance of OrderBusiness
+// func NewOrderBusiness(config OrderBusinessConfig) (*OrderBusiness, error) {
+// 	if config.Producer == nil {
+// 		return nil, fmt.Errorf("producer cannot be nil")
+// 	}
+// 	if config.Orchestrator == nil {
+// 		return nil, fmt.Errorf("orchestrator cannot be nil")
 // 	}
 
-// 	results, err := b.orderProducer.SendMessages(event, opts)
-// 	if err != nil {
-// 		return fmt.Errorf("failed to send inventory reservation request: %w", err)
+// 	timeout := config.Timeout
+// 	if timeout == 0 {
+// 		timeout = defaultTimeout
 // 	}
 
-// 	for serviceID, sendErr := range results {
-// 		if sendErr != nil {
-// 			return fmt.Errorf("inventory service %s failed to process request: %w", serviceID, sendErr)
-// 		}
+// 	return &OrderBusiness{
+// 		orderProducer: config.Producer,
+// 		orchestrator:  config.Orchestrator,
+// 		timeout:       timeout,
+// 	}, nil
+// }
+
+// // CreateOrder initiates the order creation saga
+// func (b *OrderBusiness) CreateOrder(ctx context.Context, order *entities_orders.Order) *common.AppError {
+// 	if err := b.validateOrder(order); err != nil {
+// 		return common.ErrInvalidInputData(err)
+// 	}
+
+// 	ctx, cancel := context.WithTimeout(ctx, b.timeout)
+// 	defer cancel()
+
+// 	// Set initial order status
+// 	order.Status = int(OrderStatusPending)
+// 	now := time.Now()
+// 	order.CreatedAt = &now
+
+// 	// Create and initialize the saga event
+// 	_ = b.initializeSagaEvent(order)
+
+// 	// Start the saga process through the orchestrator
+// 	if err := b.orchestrator.StartOrderSaga(ctx, order); err != nil {
+// 		order.Status = int(OrderStatusFailed)
+// 		return common.ErrInternalServerError(fmt.Errorf("failed to start order saga: %w", err))
 // 	}
 
 // 	return nil
 // }
 
-// // ProcessCartUpdate handles the cart update step
-// func (b *OrderBusiness) ProcessCartUpdate(ctx context.Context, order *entities_orders.Order, sagaID string) error {
-// 	event := entities_orders.CreateServiceEvent(order, entities_orders.EventCartLocked, sagaID, 3)
-// 	event.UpdateServiceStatus("cart", entities_orders.ServicePending)
-
-// 	opts := &producer.SendMessageOptions{
-// 		TargetServices: []producer.ServiceID{producer.CartService},
+// // HandleOrderStatusUpdate processes status updates for an order
+// func (b *OrderBusiness) HandleOrderStatusUpdate(ctx context.Context, event *entities_orders.OrderEvent) *common.AppError {
+// 	if event == nil {
+// 		return common.ErrInvalidRequestParameter(fmt.Errorf("event cannot be nil"))
 // 	}
 
-// 	results, err := b.orderProducer.SendMessages(event, opts)
-// 	if err != nil {
-// 		return fmt.Errorf("failed to send cart update request: %w", err)
+// 	ctx, cancel := context.WithTimeout(ctx, b.timeout)
+// 	defer cancel()
+
+// 	// Update order status based on saga status
+// 	switch event.ServiceStatus.Status {
+// 	case entities_orders.ServiceSuccess:
+// 		event.Order.Status = int(OrderStatusCompleted)
+// 	case entities_orders.ServiceFailed:
+// 		event.Order.Status = int(OrderStatusFailed)
+// 	case entities_orders.ServiceCancelled:
+// 		event.Order.Status = int(OrderStatusCancelled)
+// 	default:
+// 		event.Order.Status = int(OrderStatusProcessing)
 // 	}
 
-// 	for serviceID, sendErr := range results {
-// 		if sendErr != nil {
-// 			return fmt.Errorf("cart service %s failed to process request: %w", serviceID, sendErr)
-// 		}
-// 	}
-
-// 	return nil
-// }
-
-// // RollbackOrder handles saga rollback
-// func (b *OrderBusiness) RollbackOrder(ctx context.Context, order *entities_orders.Order, sagaID string, failedService string) error {
-// 	event := entities_orders.CreateCompensationEvent(order, failedService, sagaID)
-
-// 	// Determine which services need compensation based on the failed service
-// 	var successfulServices []producer.ServiceID
-// 	switch failedService {
-// 	case "inventory":
-// 		successfulServices = []producer.ServiceID{producer.OrderService}
-// 	case "cart":
-// 		successfulServices = []producer.ServiceID{producer.OrderService, producer.InventoryService}
-// 	}
-
-// 	results, err := b.orderProducer.SendRollbackToSuccessfulServices(event, successfulServices)
-// 	if err != nil {
-// 		return fmt.Errorf("failed to send rollback messages: %w", err)
-// 	}
-
-// 	// Update order status to cancelled
-// 	order.Status = int(OrderStatusCancelled)
-// 	if err := b.orderRepo.Update(ctx, order); err != nil {
-// 		return fmt.Errorf("failed to update order status during rollback: %w", err)
-// 	}
-
-// 	// Check rollback results
-// 	for serviceID, sendErr := range results {
-// 		if sendErr != nil {
-// 			return fmt.Errorf("service %s failed to process rollback: %w", serviceID, sendErr)
-// 		}
+// 	// Handle the status update through the orchestrator
+// 	if err := b.orchestrator.HandleServiceResponse(ctx, *event); err != nil {
+// 		return common.ErrInternalServerError(fmt.Errorf("failed to handle status update: %w", err))
 // 	}
 
 // 	return nil
 // }
 
-// HandleServiceResponse processes responses from different services
-func (b *OrderBusiness) HandleServiceResponse(ctx context.Context, orderID int, sagaID string, serviceID producers.ServiceID, success bool, event entities_orders.OrderEvent) error {
-	order, err := b.orderRepo.FindByID(ctx, orderID)
-	if err != nil {
-		return fmt.Errorf("failed to find order: %w", err)
-	}
+// // HandleOrderCompensation processes compensation events for failed orders
+// func (b *OrderBusiness) HandleOrderCompensation(ctx context.Context, event *entities_orders.OrderEvent) *common.AppError {
+// 	if event == nil {
+// 		return common.ErrInvalidRequestParameter(fmt.Errorf("event cannot be nil"))
+// 	}
 
-	if !success {
-		// Handle failure case
-		failedService := string(serviceID)
-		return b.RollbackOrder(ctx, order, sagaID, failedService)
-	}
+// 	ctx, cancel := context.WithTimeout(ctx, b.timeout)
+// 	defer cancel()
 
-	// Handle success case
-	var nextStep func(context.Context, *entities_orders.Order, string) error
-	switch serviceID {
-	case producers.OrderService:
-		nextStep = b.ProcessInventoryReservation
-	case producers.InventoryService:
-		nextStep = b.ProcessCartUpdate
-	case producers.CartService:
-		order.Status = int(OrderStatusCompleted)
-		if err := b.orderRepo.Update(ctx, order); err != nil {
-			return fmt.Errorf("failed to update order status to completed: %w", err)
-		}
-		return nil
-	}
+// 	// Mark the order as cancelled during compensation
+// 	event.Order.Status = int(OrderStatusCancelled)
+// 	now := time.Now()
+// 	event.Order.UpdatedAt = &now
 
-	// Process next step if available
-	if nextStep != nil {
-		return nextStep(ctx, order, sagaID)
-	}
+// 	// Process the compensation through the orchestrator
+// 	if err := b.orchestrator.HandleCompensation(ctx, *event); err != nil {
+// 		return common.ErrInternalServerError(fmt.Errorf("failed to handle compensation: %w", err))
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
+
+// // Helper methods
+
+// func (b *OrderBusiness) validateOrder(order *entities_orders.Order) error {
+// 	if order == nil {
+// 		return fmt.Errorf("order cannot be nil")
+// 	}
+// 	if order.UserOrderID <= 0 {
+// 		return fmt.Errorf("invalid user ID")
+// 	}
+// 	if len(order.Cart.Items) == 0 {
+// 		return fmt.Errorf("order must contain at least one item")
+// 	}
+// 	for _, item := range order.Cart.Items {
+// 		if item.ProductID <= 0 || item.Quantity <= 0 {
+// 			return fmt.Errorf("invalid product ID or quantity")
+// 		}
+// 	}
+// 	return nil
+// }
+
+// func (b *OrderBusiness) initializeSagaEvent(order *entities_orders.Order) *entities_orders.OrderEvent {
+// 	sagaID := fmt.Sprintf("saga_%d_%s", order.ID, time.Now().Format("20060102150405"))
+// 	event := entities_orders.CreateSagaStartEvent(order, sagaID)
+
+// 	// Initialize service status
+// 	event.ServiceStatus = entities_orders.ServiceStatus{
+// 		Status:      entities_orders.ServicePending,
+// 		CurrentStep: entities_orders.EventOrderCreated,
+// 		LastUpdated: time.Now(),
+// 	}
+
+// 	event.RetryCount = 0
+// 	event.CreatedAt = time.Now()
+// 	event.UpdatedAt = time.Now()
+
+// 	return &event
+// }
+
+// // GetOrderStatus retrieves the current status of an order
+// func (b *OrderBusiness) GetOrderStatus(ctx context.Context, orderID int64) (OrderStatus, error) {
+// 	// Implement order status retrieval logic
+// 	// This could involve checking a database or cache
+// 	return OrderStatusPending, nil
+// }
+
+// // CancelOrder initiates the cancellation process for an order
+// func (b *OrderBusiness) CancelOrder(ctx context.Context, orderID int64) *common.AppError {
+// 	// Implement order cancellation logic
+// 	return nil
+// }

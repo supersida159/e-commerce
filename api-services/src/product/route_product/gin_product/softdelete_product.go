@@ -11,24 +11,24 @@ import (
 	"github.com/supersida159/e-commerce/api-services/src/product/usecase_product"
 )
 
-func SoftDeleteProductHandler(appCtx app_context.Appcontext) func(c *gin.Context) {
+func SoftDeleteProductHandler(appCtx app_context.AppContext) func(c *gin.Context) {
 
 	return func(c *gin.Context) {
 		getParam := c.Query("id")
 		if getParam == "" {
-			c.JSON(http.StatusBadRequest, common.ErrInvalidRequest(nil))
+			c.JSON(http.StatusBadRequest, common.ErrInvalidMessageKey(nil))
 			return
 		}
 		FakeId, err := common.FromBase58(getParam)
 		fmt.Println(FakeId.GetLocalID())
 		if err != nil {
-			c.JSON(http.StatusBadRequest, common.ErrInvalidRequest(err))
+			c.JSON(http.StatusBadRequest, common.ErrInvalidMessageKey(err))
 			return
 		}
 
 		userPermission := c.MustGet(common.CurrentUser).(common.Requester)
 		if userPermission.GetRole() != "admin" {
-			c.JSON(http.StatusUnauthorized, common.ErrNoPermission(nil))
+			c.JSON(http.StatusUnauthorized, common.ErrForbidden(nil))
 			return
 		}
 		store := repositoryproduct.NewSQLStore(appCtx.GetMainDBConnection())

@@ -11,19 +11,20 @@ import (
 	"github.com/supersida159/e-commerce/api-services/src/cart/route_cart"
 	"github.com/supersida159/e-commerce/api-services/src/order/route_order"
 	route_product "github.com/supersida159/e-commerce/api-services/src/product/route_product"
-	"github.com/supersida159/e-commerce/api-services/src/upload/route_upload"
+
+	// "github.com/supersida159/e-commerce/api-services/src/upload/route_upload"
 	"github.com/supersida159/e-commerce/api-services/src/users/route_user"
 )
 
 type Server struct {
-	appCtx app_context.Appcontext
+	appCtx app_context.AppContext
 	engine *gin.Engine
 }
 
-func (s Server) GetAppContext() app_context.Appcontext {
+func (s Server) GetAppContext() app_context.AppContext {
 	return s.appCtx
 }
-func NewServer(appCtx app_context.Appcontext) *Server {
+func NewServer(appCtx app_context.AppContext) *Server {
 	return &Server{
 		appCtx: appCtx,
 		engine: gin.Default(),
@@ -42,6 +43,8 @@ func (s *Server) Run(rte *skio.RtEngine) error {
 
 	rte.Run(s.appCtx, s.engine)
 
+	fmt.Println("port:", s.appCtx.GetConfig().HttpPort)
+
 	if err := s.engine.Run(fmt.Sprintf(":%d", s.appCtx.GetConfig().HttpPort)); err != nil {
 		log.Fatalf("Running HTTP server: %v", err)
 	}
@@ -58,7 +61,7 @@ func (s *Server) MapRoutes() error {
 	v1 := s.engine.Group("/api/v1")
 
 	route_user.Routes(v1.Group("/user"), s.appCtx)
-	route_upload.Routes(v1.Group("/upload"), s.appCtx)
+	// route_upload.Routes(v1.Group("/upload"), s.appCtx)
 	route_product.Routes(v1.Group("/product"), s.appCtx)
 	route_order.Routes(v1.Group("/order"), s.appCtx)
 	route_cart.Routes(v1.Group("/cart"), s.appCtx)

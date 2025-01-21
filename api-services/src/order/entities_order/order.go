@@ -21,7 +21,6 @@ const (
 type Order struct {
 	common.SQLModel `json:",inline"` // Inline embedding of common.SQLModel struct
 	UserOrderID     int              `gorm:"column:user_order_id" json:"-"`
-	BusinessID      string           `gorm:"uniqueIndex;not null" json:"business_id"` // UUID for distributed systems, this is using for kafka
 
 	// User-facing fields
 	CustomerName  string                       `gorm:"column:customer_name" json:"customer_name"`               // Name of the customer

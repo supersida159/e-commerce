@@ -11,7 +11,7 @@ import (
 	usecaseproduct "github.com/supersida159/e-commerce/api-services/src/product/usecase_product"
 )
 
-func CreateProductHandler(appCtx app_context.Appcontext) func(c *gin.Context) {
+func CreateProductHandler(appCtx app_context.AppContext) func(c *gin.Context) {
 
 	return func(c *gin.Context) {
 		var data entities_product.Product
@@ -19,18 +19,18 @@ func CreateProductHandler(appCtx app_context.Appcontext) func(c *gin.Context) {
 		userPermission := c.MustGet(common.CurrentUser).(common.Requester)
 
 		if userPermission.GetRole() != "admin" {
-			c.JSON(http.StatusUnauthorized, common.ErrInvalidRequest(nil))
+			c.JSON(http.StatusUnauthorized, common.ErrInvalidMessageKey(nil))
 			return
 		}
 		store := repositoryproduct.NewSQLStore(appCtx.GetMainDBConnection())
 		biz := usecaseproduct.NewCreateProductBiz(store)
 
 		if err := c.ShouldBind(&data); err != nil {
-			c.JSON(http.StatusBadRequest, common.ErrInvalidRequest(err))
+			c.JSON(http.StatusBadRequest, common.ErrInvalidMessageKey(err))
 			return
 		}
 		if data.Category == "" {
-			c.JSON(http.StatusBadRequest, common.ErrInvalidRequest(nil))
+			c.JSON(http.StatusBadRequest, common.ErrInvalidMessageKey(nil))
 			return
 		}
 		data.Code = common.GenerateCode(data.Category)

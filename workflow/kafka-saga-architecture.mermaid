@@ -1,0 +1,43 @@
+graph TB
+    subgraph Client Layer
+        C[Client]
+    end
+
+    subgraph Kafka Message Broker
+        KT1[Topic: saga.commands]
+        KT2[Topic: saga.events]
+        KT3[Topic: saga.compensation]
+        KT4[Topic: saga.reply]
+    end
+
+    subgraph Orchestrator
+        O[Saga Orchestrator]
+        ST[Saga Tracker]
+    end
+
+    subgraph Services
+        OS[Order Service]
+        PS[Payment Service]
+        IS[Inventory Service]
+    end
+
+    C -->|1. Request| O
+    O -->|2. Command Events| KT1
+    KT1 -->|3a. Commands| OS
+    KT1 -->|3b. Commands| PS
+    KT1 -->|3c. Commands| IS
+    
+    OS -->|4a. Service Events| KT2
+    PS -->|4b. Service Events| KT2
+    IS -->|4c. Service Events| KT2
+    
+    KT2 -->|5. Events| ST
+    ST -->|6. Completion/Failure| O
+    
+    O -->|7a. Compensation| KT3
+    KT3 -->|7b. Rollback| OS
+    KT3 -->|7c. Rollback| PS
+    KT3 -->|7d. Rollback| IS
+    
+    O -->|8. Final Result| KT4
+    KT4 -->|9. Response| C

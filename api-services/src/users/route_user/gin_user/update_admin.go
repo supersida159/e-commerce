@@ -12,20 +12,20 @@ import (
 	"github.com/supersida159/e-commerce/api-services/src/users/usecase_user"
 )
 
-func AddUpdateAddmin(appctx app_context.Appcontext) gin.HandlerFunc {
+func AddUpdateAddmin(appctx app_context.AppContext) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		db := appctx.GetMainDBConnection()
 
 		var data entities_user.UpdatePermission
 		var updateUser entities_user.UserUpdate
 		if err := c.ShouldBind(&data); err != nil {
-			c.JSON(http.StatusBadRequest, common.ErrInvalidRequest(err))
+			c.JSON(http.StatusBadRequest, common.ErrJSONBlindding(err))
 			return
 		}
 		admin := c.MustGet(common.CurrentUser).(common.Requester)
 
 		if admin.GetRole() != "admin" {
-			c.JSON(http.StatusUnauthorized, common.ErrInvalidRequest(nil))
+			c.JSON(http.StatusUnauthorized, common.ErrMissingRequiredField("admin", nil))
 			return
 		}
 		updateUser.Email = data.UpdateEmail

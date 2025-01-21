@@ -29,7 +29,7 @@ func NewListProductsBiz(store ListProductsStore) *listProductsBiz {
 func (biz *listProductsBiz) ListProductsBiz(ctx context.Context, filter *entities_product.ListProductReq, paging *common.Paging) ([]entities_product.ListProductRes, error) {
 	results, err := biz.store.ListProduct(ctx, nil, filter, paging)
 	if err != nil {
-		return nil, common.ErrCannotListEntity(entities_product.EntityName, err)
+		return nil, common.ErrDB(err)
 	}
 	return results, nil
 }

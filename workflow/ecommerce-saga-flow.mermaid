@@ -1,0 +1,19 @@
+graph TD
+    A[Client] -->|Place Order| B(Order Service)
+    B -->|Publish| C{Kafka}
+    C -->|update-cart| D[Update Cart Service]
+    C -->|update-inventory| E[Update Inventory Service]
+    C -->|payment| F[Payment Service]
+    C -->|shipping| G[Shipping Service]
+    D -->|Success/Failure| H{Kafka - Response}
+    E -->|Success/Failure| H
+    F -->|Success/Failure| H
+    G -->|Success/Failure| H
+    H -->|All Success| I[Complete Order]
+    H -->|Any Failure| J[Initiate Compensation]
+    J -->|Publish| K{Kafka - Compensation}
+    K -->|update-cart-compensation| L[Update Cart Compensation]
+    K -->|update-inventory-compensation| M[Update Inventory Compensation]
+    K -->|payment-compensation| N[Payment Compensation]
+    K -->|shipping-compensation| O[Shipping Compensation]
+    L & M & N & O -->|Compensation Complete| P[Order Cancelled]

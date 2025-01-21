@@ -15,7 +15,7 @@ import (
 	"github.com/supersida159/e-commerce/api-services/src/product/usecase_product"
 )
 
-func ListProducts(appCtx app_context.Appcontext) func(c *gin.Context) {
+func ListProducts(appCtx app_context.AppContext) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		var reqData entities_product.ListProductReq
 		var resData []entities_product.ListProductRes
@@ -36,7 +36,7 @@ func ListProducts(appCtx app_context.Appcontext) func(c *gin.Context) {
 				// Handle the empty form case here
 				fmt.Println("Form is empty")
 			} else {
-				c.JSON(http.StatusBadRequest, common.ErrInvalidRequest(err))
+				c.JSON(http.StatusBadRequest, common.ErrInvalidMessageKey(err))
 				return
 			}
 

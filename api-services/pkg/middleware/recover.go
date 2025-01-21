@@ -6,7 +6,7 @@ import (
 	"github.com/supersida159/e-commerce/api-services/pkg/app_context"
 )
 
-func Recover(ac app_context.Appcontext) gin.HandlerFunc {
+func Recover(ac app_context.AppContext) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		defer func() {
 			if err := recover(); err != nil {

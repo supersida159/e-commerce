@@ -24,7 +24,7 @@ func NewGetProductBiz(store GetProductStore) *getProductBiz {
 func (biz *getProductBiz) GetProductBiz(ctx context.Context, name string) (*[]entities_product.Product, error) {
 	products, err := biz.store.GetProduct(ctx, name)
 	if err != nil {
-		return nil, common.ErrCannotGetEntity(entities_product.EntityName, err)
+		return nil, common.ErrDB(err)
 	}
 	return products, nil
 }

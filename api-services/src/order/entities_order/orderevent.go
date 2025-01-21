@@ -1,18 +1,42 @@
 package entities_orders
 
 import (
+	"fmt"
 	"time"
+)
+
+// ServiceName type for service identification
+type ServiceName string
+
+const (
+	OrderService     ServiceName = "order"
+	InventoryService ServiceName = "inventory"
+	CartService      ServiceName = "cart"
+)
+
+type EventTypeString string
+
+const (
+	EventOrderCreate EventTypeString = "Order Create"
+	EventSuccess     EventTypeString = "Order Successes"
+	EventFailed      EventTypeString = "Order Failed"
+	EventRollback    EventTypeString = "Order Rollback"
 )
 
 // ServiceStatus tracks the status of each service involved in the saga
 type ServiceStatus struct {
-	OrderService     int       `json:"order_service"`
-	InventoryService int       `json:"inventory_service"`
-	CartService      int       `json:"cart_service"`
-	PaymentService   int       `json:"payment_service"`
-	LastUpdated      time.Time `json:"last_updated"`
-	CurrentStep      string    `json:"current_step"`
-	CompensatingStep string    `json:"compensating_step,omitempty"`
+	Status           ServiceStatusNumber          `json:"status"`
+	CurrentStep      string                       `json:"current_step"`
+	CompensatingStep string                       `json:"compensating_step,omitempty"`
+	LastUpdated      time.Time                    `json:"last_updated"`
+	ServiceStates    map[ServiceName]ServiceState `json:"service_states"`
+}
+
+// ServiceState represents the state of an individual service
+type ServiceState struct {
+	Status    ServiceStatusNumber `json:"status"`
+	UpdatedAt time.Time           `json:"updated_at"`
+	Error     string              `json:"error,omitempty"`
 }
 
 // OrderEvent represents an event in the order saga
@@ -20,14 +44,17 @@ type OrderEvent struct {
 	Order         `json:",inline"`
 	ServiceStatus ServiceStatus `json:"service_status"`
 
-	Payload        interface{}            `json:"payload"`
+	CurrentService ServiceName            `json:"current_service"`
 	EventType      string                 `json:"event_type"`
 	EventTimestamp time.Time              `json:"event_timestamp"`
-	SagaID         string                 `json:"saga_id"`            // Unique identifier for the saga instance
-	StepNumber     int                    `json:"step_number"`        // Current step in the saga
-	RetryCount     int                    `json:"retry_count"`        // Number of retries for current step
-	Error          string                 `json:"error,omitempty"`    // Error message if any
-	Metadata       map[string]interface{} `json:"metadata,omitempty"` // Additional metadata for the event
+	SagaID         string                 `json:"saga_id"`
+	StepNumber     int                    `json:"step_number"`
+	RetryCount     int                    `json:"retry_count"`
+	Error          string                 `json:"error,omitempty"`
+	Metadata       map[string]interface{} `json:"metadata,omitempty"`
+	Version        int                    `json:"version"` // Optimistic locking
+	CreatedAt      time.Time              `json:"created_at"`
+	UpdatedAt      time.Time              `json:"updated_at"`
 }
 
 // ServiceStatusNumber represents the possible states of a service
@@ -35,23 +62,24 @@ type ServiceStatusNumber int
 
 const (
 	ServiceInit ServiceStatusNumber = iota
-	ServiceSentFailed
 	ServicePending
 	ServiceProcessing
-	ServiceSendRollBackFailed
 	ServiceSuccess
-	ServiceCancelled
 	ServiceFailed
-	ServiceRollbackFailed
-	ServiceRollbackSuccess
+	ServiceCancelled
+	ServiceTimedOut
+	ServiceSentFailed
 	ServiceCompensating
 	ServiceCompensated
-	ServiceTimedOut
+	ServiceRollbackInitiated
+	ServiceRollbackInProgress
+	ServiceRollbackSuccess
+	ServiceRollbackFailed
 )
 
 // Event types for the saga orchestration
 const (
-	// Saga Commands
+	// Saga Lifecycle Events
 	EventSagaStarted      = "SAGA_STARTED"
 	EventSagaCompleted    = "SAGA_COMPLETED"
 	EventSagaFailed       = "SAGA_FAILED"
@@ -59,10 +87,11 @@ const (
 	EventSagaCompensated  = "SAGA_COMPENSATED"
 
 	// Order Service Events
-	EventOrderCreated   = "ORDER_CREATED"
-	EventOrderValidated = "ORDER_VALIDATED"
-	EventOrderFailed    = "ORDER_FAILED"
-	EventOrderCancelled = "ORDER_CANCELLED"
+	EventOrderCreated     = "ORDER_CREATED"
+	EventOrderValidated   = "ORDER_VALIDATED"
+	EventOrderFailed      = "ORDER_FAILED"
+	EventOrderCancelled   = "ORDER_CANCELLED"
+	EventOrderCompensated = "ORDER_COMPENSATED"
 
 	// Inventory Service Events
 	EventInventoryRequested   = "INVENTORY_REQUESTED"
@@ -85,61 +114,106 @@ const (
 
 // NewOrderEvent creates an OrderEvent with initialized service statuses
 func NewOrderEvent(order *Order, eventType string) OrderEvent {
-	return OrderEvent{
-		Order: *order,
-		ServiceStatus: ServiceStatus{
-			OrderService:     int(ServiceInit),
-			InventoryService: int(ServiceInit),
-			CartService:      int(ServiceInit),
-			PaymentService:   int(ServiceInit),
-			LastUpdated:      time.Now(),
+	event := OrderEvent{
+		Order:         *order,
+		EventType:     eventType,
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
+		ServiceStatus: newServiceStatus(),
+		Metadata:      make(map[string]interface{}),
+	}
+	return event
+}
+
+// newServiceStatus initializes a new ServiceStatus with default values
+func newServiceStatus() ServiceStatus {
+	return ServiceStatus{
+		Status:      ServiceInit,
+		LastUpdated: time.Now(),
+		ServiceStates: map[ServiceName]ServiceState{
+			OrderService:     {Status: ServiceInit, UpdatedAt: time.Now()},
+			InventoryService: {Status: ServiceInit, UpdatedAt: time.Now()},
+			CartService:      {Status: ServiceInit, UpdatedAt: time.Now()},
 		},
-		EventType:      eventType,
-		EventTimestamp: time.Now(),
-		Metadata:       make(map[string]interface{}),
 	}
 }
 
 // UpdateServiceStatus updates the status of a specific service
-func (e *OrderEvent) UpdateServiceStatus(service string, status ServiceStatusNumber) {
-	switch service {
-	case "order":
-		e.ServiceStatus.OrderService = int(status)
-	case "inventory":
-		e.ServiceStatus.InventoryService = int(status)
-	case "cart":
-		e.ServiceStatus.CartService = int(status)
-	case "payment":
-		e.ServiceStatus.PaymentService = int(status)
+func (e *OrderEvent) UpdateServiceStatus(service ServiceName, status ServiceStatusNumber, errMsg string) error {
+	state, exists := e.ServiceStatus.ServiceStates[service]
+	if !exists {
+		return fmt.Errorf("invalid service name: %s", service)
 	}
+
+	state.Status = status
+	state.UpdatedAt = time.Now()
+	state.Error = errMsg
+	e.ServiceStatus.ServiceStates[service] = state
 	e.ServiceStatus.LastUpdated = time.Now()
+	e.UpdatedAt = time.Now()
+	e.Version++
+
+	return nil
+}
+
+// GetServiceState returns the current state of a specific service
+func (e *OrderEvent) GetServiceState(service ServiceName) (ServiceState, error) {
+	state, exists := e.ServiceStatus.ServiceStates[service]
+	if !exists {
+		return ServiceState{}, fmt.Errorf("invalid service name: %s", service)
+	}
+	return state, nil
 }
 
 // IsCompensating checks if any service is in compensating state
 func (e *OrderEvent) IsCompensating() bool {
-	return e.ServiceStatus.OrderService == int(ServiceCompensating) ||
-		e.ServiceStatus.InventoryService == int(ServiceCompensating) ||
-		e.ServiceStatus.CartService == int(ServiceCompensating) ||
-		e.ServiceStatus.PaymentService == int(ServiceCompensating)
+	for _, state := range e.ServiceStatus.ServiceStates {
+		if state.Status == ServiceCompensating {
+			return true
+		}
+	}
+	return false
 }
 
 // AllServicesCompleted checks if all services have completed successfully
 func (e *OrderEvent) AllServicesCompleted() bool {
-	return e.ServiceStatus.OrderService == int(ServiceSuccess) &&
-		e.ServiceStatus.InventoryService == int(ServiceSuccess) &&
-		e.ServiceStatus.CartService == int(ServiceSuccess) &&
-		e.ServiceStatus.PaymentService == int(ServiceSuccess)
-}
-
-// AddMetadata adds metadata to the event
-func (e *OrderEvent) AddMetadata(key string, value interface{}) {
-	if e.Metadata == nil {
-		e.Metadata = make(map[string]interface{})
+	for _, state := range e.ServiceStatus.ServiceStates {
+		if state.Status != ServiceSuccess {
+			return false
+		}
 	}
-	e.Metadata[key] = value
+	return true
 }
 
-// Helper functions for creating specific events
+// AreAllServicesDone checks if all services have reached a terminal state
+func (e *OrderEvent) AreAllServicesDone() (bool, bool) {
+	allDone := true
+	allSuccess := true
+
+	for _, state := range e.ServiceStatus.ServiceStates {
+		if state.Status != ServiceSuccess && state.Status != ServiceFailed {
+			allDone = false
+			break
+		}
+		if state.Status == ServiceFailed {
+			allSuccess = false
+		}
+	}
+
+	return allDone, allSuccess
+}
+
+// AreAllCompensationsDone checks if all compensations have completed
+func (e *OrderEvent) AreAllCompensationsDone() bool {
+	for _, state := range e.ServiceStatus.ServiceStates {
+		if state.Status != ServiceRollbackSuccess && state.Status != ServiceRollbackFailed {
+			return false
+		}
+	}
+	return true
+}
+
+// Helper functions for event creation
 func CreateSagaStartEvent(order *Order, sagaID string) OrderEvent {
 	event := NewOrderEvent(order, EventSagaStarted)
 	event.SagaID = sagaID
@@ -154,46 +228,31 @@ func CreateServiceEvent(order *Order, eventType string, sagaID string, stepNumbe
 	return event
 }
 
-func CreateCompensationEvent(order *Order, failedService string, sagaID string) OrderEvent {
+func CreateCompensationEvent(order *Order, failedService ServiceName, sagaID string) OrderEvent {
 	event := NewOrderEvent(order, EventSagaCompensating)
 	event.SagaID = sagaID
-	event.AddMetadata("failed_service", failedService)
+	event.AddMetadata("failed_service", string(failedService))
 	return event
 }
-func (e *OrderEvent) AreAllServicesDone() (bool, bool) {
-	services := []int{
-		e.ServiceStatus.OrderService,
-		e.ServiceStatus.InventoryService,
-		e.ServiceStatus.CartService,
-	}
-	isSuccess := true
 
-	for _, service := range services {
-		// Check if the service is not in either ServiceFailed or ServiceCompleted state
-		if service != int(ServiceFailed) && service != int(ServiceSuccess) {
-			return false, false // Return false if any service is still in progress
-		}
-		if service == int(ServiceFailed) {
-			isSuccess = false
-		}
+// AddMetadata adds metadata to the event
+func (e *OrderEvent) AddMetadata(key string, value interface{}) {
+	if e.Metadata == nil {
+		e.Metadata = make(map[string]interface{})
 	}
-
-	return true, isSuccess // All services are either failed or completed
+	e.Metadata[key] = value
 }
 
-func (e *OrderEvent) AreAllCompensationsDone() bool {
-	services := []int{
-		e.ServiceStatus.OrderService,
-		e.ServiceStatus.InventoryService,
-		e.ServiceStatus.CartService,
+// Validate validates the event
+func (e *OrderEvent) Validate() error {
+	if e.SagaID == "" {
+		return fmt.Errorf("saga ID is required")
 	}
-
-	for _, service := range services {
-		// Check if the service is not in either ServiceFailed or ServiceCompleted state
-		if service != int(ServiceRollbackFailed) && service != int(ServiceRollbackSuccess) {
-			return false // Return false if any service is still in progress
-		}
-
+	if e.EventType == "" {
+		return fmt.Errorf("event type is required")
 	}
-	return true
+	if e.Order.ID <= 0 {
+		return fmt.Errorf("invalid order ID")
+	}
+	return nil
 }

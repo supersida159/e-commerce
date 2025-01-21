@@ -17,12 +17,12 @@ type consumerJob struct {
 }
 
 type consumerEngine struct {
-	appCtx   app_context.Appcontext
+	appCtx   app_context.AppContext
 	rtEngine skio.RealTimeEngine
 }
 
 func NewEngine(
-	appCtx app_context.Appcontext,
+	appCtx app_context.AppContext,
 	rtEngine skio.RealTimeEngine) *consumerEngine {
 	return &consumerEngine{
 		appCtx:   appCtx,

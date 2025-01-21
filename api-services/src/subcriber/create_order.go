@@ -13,7 +13,7 @@ type HashUserCreateOrderID interface {
 	GetUserOrderID() int
 }
 
-func RunCreateNewCartAfterCreateAnOrder(appCtx app_context.Appcontext) consumerJob {
+func RunCreateNewCartAfterCreateAnOrder(appCtx app_context.AppContext) consumerJob {
 	return consumerJob{
 		Title: "PleaceAnNewOrder",
 		Hld: func(ctx context.Context, msg *pubsub.Message) error {
@@ -25,7 +25,7 @@ func RunCreateNewCartAfterCreateAnOrder(appCtx app_context.Appcontext) consumerJ
 	}
 }
 
-func EmitCreateNewCartAfterCreateAnOrder(appCtx app_context.Appcontext, engine skio.RealTimeEngine) consumerJob {
+func EmitCreateNewCartAfterCreateAnOrder(appCtx app_context.AppContext, engine skio.RealTimeEngine) consumerJob {
 	return consumerJob{
 		Title: "Emit to user after create an order",
 		Hld: func(ctx context.Context, msg *pubsub.Message) error {

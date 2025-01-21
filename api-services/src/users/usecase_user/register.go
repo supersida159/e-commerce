@@ -15,11 +15,11 @@ type RegisterStorage interface {
 
 type RegisterBusiness struct {
 	storeUser RegisterStorage
-	appCtx    app_context.Appcontext
+	appCtx    app_context.AppContext
 	hasher    Hasher
 }
 
-func NewRegisterBusiness(appCtx app_context.Appcontext, storeUser RegisterStorage, hasher Hasher) *RegisterBusiness {
+func NewRegisterBusiness(appCtx app_context.AppContext, storeUser RegisterStorage, hasher Hasher) *RegisterBusiness {
 	return &RegisterBusiness{
 		appCtx:    appCtx,
 		storeUser: storeUser,
@@ -31,7 +31,7 @@ func (b *RegisterBusiness) Register(ctx context.Context, data *entities_user.Use
 
 	user, err := b.storeUser.FindUser(ctx, map[string]interface{}{"email": data.Email})
 	if user != nil {
-		return common.ErrEntityExisted(entities_user.UserRoloUser.String(), err)
+		return common.ErrUserNameExists(err)
 	}
 
 	salt := common.GenSalt(50)

@@ -18,11 +18,11 @@ import (
 
 type CartController struct {
 	CartService *usecase_carts.CartBiz
-	AppContext  app_context.Appcontext
+	AppContext  app_context.AppContext
 	Validate    *common.Validator
 }
 
-func NewCartController(appContext app_context.Appcontext) (*CartController, *common.AppError) {
+func NewCartController(appContext app_context.AppContext) (*CartController, *common.AppError) {
 	dbs := appContext.GetMainDBConnection()
 
 	store := repository_carts.NewCartStore(dbs)

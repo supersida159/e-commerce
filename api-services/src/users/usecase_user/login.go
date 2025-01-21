@@ -23,14 +23,14 @@ type Hasher interface {
 }
 
 type LoginBusiness struct {
-	appCtx        app_context.Appcontext
+	appCtx        app_context.AppContext
 	storeUser     LoginStorage
 	tokenProvider tokenprovider.Provider
 	hasher        Hasher
 	expiry        int
 }
 
-func NewLoginBusiness(appCtx app_context.Appcontext, storeUser LoginStorage, tokenProvider tokenprovider.Provider, hasher Hasher, expiry int) *LoginBusiness {
+func NewLoginBusiness(appCtx app_context.AppContext, storeUser LoginStorage, tokenProvider tokenprovider.Provider, hasher Hasher, expiry int) *LoginBusiness {
 	return &LoginBusiness{
 		appCtx:        appCtx,
 		storeUser:     storeUser,
@@ -40,18 +40,18 @@ func NewLoginBusiness(appCtx app_context.Appcontext, storeUser LoginStorage, tok
 	}
 }
 
-func (b *LoginBusiness) Login(ctx context.Context, data *entities_user.UserLogin) (*entities_user.Account, error) {
+func (b *LoginBusiness) Login(ctx context.Context, data *entities_user.UserLogin) (*entities_user.Account, *common.AppError) {
 	user, err := b.storeUser.FindUser(ctx, map[string]interface{}{"email": data.Email})
 
 	fmt.Println("data", data)
 
 	if err != nil {
-		return nil, common.ErrCannotGetEntity(entities_user.UserRoloUser.String(), err)
+		return nil, common.ErrUserNotExist(err)
 	}
 
 	passHash := b.hasher.Hash(data.Password + user.Salt)
 	if passHash != user.Password {
-		return nil, &common.ErrUserNameOrPasswordInvalid
+		return nil, common.ErrWrongPasswordOrUsername()
 	}
 
 	payload := &tokenprovider.TokenPayload{
@@ -61,11 +61,11 @@ func (b *LoginBusiness) Login(ctx context.Context, data *entities_user.UserLogin
 
 	accessToken, err := b.tokenProvider.Generate(payload, b.expiry)
 	if err != nil {
-		return nil, common.ErrInternal(err)
+		return nil, common.ErrInternalServerError(err)
 	}
 	refreshToken, err := b.tokenProvider.Generate(payload, b.expiry*2)
 	if err != nil {
-		return nil, common.ErrInternal(err)
+		return nil, common.ErrInternalServerError(err)
 	}
 	account := entities_user.NewAccount(accessToken, refreshToken)
 	return account, nil

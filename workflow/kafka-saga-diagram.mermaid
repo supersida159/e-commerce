@@ -1,0 +1,54 @@
+flowchart LR
+    CS[Central System]
+    O[Orchestrator]
+    Cart[Create Cart Service]
+    Update[Update Cart Service]
+    Inv[Update Inventory Service]
+    
+    subgraph Kafka Topics
+        CT[CartService.topic]
+        UT[UpdateCart.topic]
+        IT[Inventory.topic]
+        ST[Saga.topic]
+        RT[Rollback.topic]
+    end
+    
+    %% Initial request
+    CS -->|1. Create Order Request| O
+    
+    %% Parallel service execution through dedicated topics
+    O -->|2a. Create Cart Command| CT
+    O -->|2b. Update Cart Command| UT
+    O -->|2c. Update Inventory Command| IT
+    
+    %% Services reading their topics
+    CT --> Cart
+    UT --> Update
+    IT --> Inv
+    
+    %% Services updating saga status
+    Cart -->|3a. Update Status| ST
+    Update -->|3b. Update Status| ST
+    Inv -->|3c. Update Status| ST
+    
+    %% Orchestrator monitoring
+    ST -->|4. Monitor Status| O
+    
+    %% Rollback flow on failure
+    O -->|5. Send Rollback Commands| RT
+    RT -->|6a. Rollback| Cart
+    RT -->|6b. Rollback| Update
+    RT -->|6c. Rollback| Inv
+    
+    %% Final status update
+    Cart -->|7a. Update Rollback Status| ST
+    Update -->|7b. Update Rollback Status| ST
+    Inv -->|7c. Update Rollback Status| ST
+    
+    %% Final response
+    O -->|8. Final Status| CS
+    
+    classDef service fill:#f96,stroke:#333
+    classDef topic fill:#bbf,stroke:#333
+    class Cart,Update,Inv service
+    class CT,UT,IT,ST,RT topic

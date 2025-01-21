@@ -24,7 +24,7 @@ func NewUpdateProductBiz(store UpdateProductStore) *updateProductBiz {
 
 func (biz *updateProductBiz) UpdateProductBiz(ctx context.Context, data *entities_product.Product) error {
 	if err := biz.store.UpdateProduct(ctx, data); err != nil {
-		return common.ErrCannotUpdateEntity(entities_product.EntityName, err)
+		return common.ErrDB(err)
 	}
 	return nil
 }

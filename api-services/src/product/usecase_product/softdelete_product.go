@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/supersida159/e-commerce/api-services/common"
-	"github.com/supersida159/e-commerce/api-services/src/product/entities_product"
 )
 
 type SoftDeleteProductStore interface {
@@ -25,7 +24,7 @@ func NewSoftDeleteProductBiz(store SoftDeleteProductStore) *softDeleteProductBiz
 func (biz *softDeleteProductBiz) SoftDeleteProductBiz(ctx context.Context, id int) error {
 
 	if err := biz.store.SoftDeleteProduct(ctx, id); err != nil {
-		return common.ErrCannotDeleteEntity(entities_product.EntityName, err)
+		return common.ErrDB(err)
 	}
 	return nil
 }

@@ -37,6 +37,15 @@ type Schema struct {
 	S3APIKey      string `env:"S3_API_KEY"`
 	S3SecretKey   string `env:"S3_SECRET_KEY"`
 	S3Domain      string `env:"S3_DOMAIN"`
+	Kafka         struct {
+		Broker               []string `env:"KAFKA_BROKERS"`
+		Retry                int      `env:"KAFKA_RETRY"`
+		ConsumerOffsetReset  string   `env:"KAFKA_CONSUMER_OFFSET_RESET"`
+		ProducerRequiredAcks int      `env:"KAFKA_PRODUCER_REQUIRED_ACKS"`
+		EnableTLS            bool     `env:"KAFKA_ENABLE_TLS"`
+		KafkaVersion         string   `env:"KAFKA_VERSION"`
+		Timeout              int      `env:"KAFKA_TIMEOUT"`
+	}
 }
 
 var (
@@ -47,7 +56,7 @@ func LoadConfig() *Schema {
 	_, filename, _, _ := runtime.Caller(0)
 	currentDir := filepath.Dir(filename)
 
-	err := godotenv.Load(filepath.Join(currentDir, "config.yaml"))
+	err := godotenv.Load(filepath.Join(currentDir, "config.sample.yaml"))
 	if err != nil {
 		log.Printf("Error on load configuration file, error: %v", err)
 	}

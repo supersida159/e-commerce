@@ -10,16 +10,16 @@ import (
 
 type UpdatePermissionStorage interface {
 	FindUser(ctx context.Context, conditions map[string]interface{}, moreInfo ...string) (*entities_user.User, error)
-	UpdateUserAddmin(ctx context.Context, data *entities_user.UserUpdate) error
+	UpdateUser(ctx context.Context, data *entities_user.UserUpdate) error
 }
 
 type updatePermissionBusiness struct {
 	storeUser UpdatePermissionStorage
-	appCtx    app_context.Appcontext
+	appCtx    app_context.AppContext
 	hasher    Hasher
 }
 
-func NewUpdatePermissionBusiness(appCtx app_context.Appcontext, storeUser UpdatePermissionStorage, hasher Hasher) *updatePermissionBusiness {
+func NewUpdatePermissionBusiness(appCtx app_context.AppContext, storeUser UpdatePermissionStorage, hasher Hasher) *updatePermissionBusiness {
 	return &updatePermissionBusiness{
 		appCtx:    appCtx,
 		storeUser: storeUser,
@@ -28,7 +28,7 @@ func NewUpdatePermissionBusiness(appCtx app_context.Appcontext, storeUser Update
 }
 
 func (b *updatePermissionBusiness) UpdateUserPermission(ctx context.Context, data *entities_user.UserUpdate) error {
-	if err := b.storeUser.UpdateUserAddmin(ctx, data); err != nil {
+	if err := b.storeUser.UpdateUser(ctx, data); err != nil {
 		return common.ErrDB(err)
 	}
 	return nil

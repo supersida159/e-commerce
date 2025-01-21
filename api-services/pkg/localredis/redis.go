@@ -1,4 +1,4 @@
-package redis
+package localredis
 
 import (
 	"context"
@@ -219,4 +219,33 @@ func (r *RedisWRealStore) LockKey(ctx context.Context, key string) error {
 func (r *RedisWRealStore) UnlockKey(ctx context.Context, key string) error {
 	_, err := r.Client.Del(ctx, key+"_lock").Result()
 	return err
+}
+func (r *RedisWRealStore) SetWithExpirationPreserve(ctx context.Context, key string, value interface{}) error {
+	// Step 1: Get the current TTL (Time To Live) of the key
+	ttl, err := r.Client.TTL(ctx, key).Result()
+	if err != nil {
+		return fmt.Errorf("could not get TTL for key %s: %w", key, err)
+	}
+
+	// Step 2: Update the value of the key
+	bData, err := json.Marshal(value)
+	if err != nil {
+		return fmt.Errorf("could not marshal value: %w", err)
+	}
+
+	// Set the new value (no expiration set here, meaning the key will persist)
+	err = r.Client.Set(ctx, key, bData, 0).Err()
+	if err != nil {
+		return fmt.Errorf("could not set key %s: %w", key, err)
+	}
+
+	// Step 3: Reapply the original TTL (expiration time)
+	if ttl > 0 {
+		err = r.Client.Expire(ctx, key, ttl).Err()
+		if err != nil {
+			return fmt.Errorf("could not reset expiration for key %s: %w", key, err)
+		}
+	}
+
+	return nil
 }

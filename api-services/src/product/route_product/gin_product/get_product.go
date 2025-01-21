@@ -10,7 +10,7 @@ import (
 	"github.com/supersida159/e-commerce/api-services/src/product/usecase_product"
 )
 
-func GetProductHandler(appCtx app_context.Appcontext) func(c *gin.Context) {
+func GetProductHandler(appCtx app_context.AppContext) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		store := repositoryproduct.NewSQLStore(appCtx.GetMainDBConnection())
 		biz := usecase_product.NewGetProductBiz(store)

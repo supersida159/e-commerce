@@ -7,7 +7,7 @@ import (
 	"github.com/supersida159/e-commerce/api-services/src/users/route_user/gin_user"
 )
 
-func Routes(r *gin.RouterGroup, appCtx app_context.Appcontext) {
+func Routes(r *gin.RouterGroup, appCtx app_context.AppContext) {
 	r.POST("/login", gin_user.Login(appCtx))
 	r.POST("/register", gin_user.Register(appCtx))
 	authRoute := r.Group("/Private", middleware.RequireAuth(appCtx))

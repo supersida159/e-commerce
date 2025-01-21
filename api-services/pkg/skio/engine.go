@@ -22,7 +22,7 @@ type RealTimeEngine interface {
 	UserSocket(userId int) []AppSocket
 	EmitToRoom(room, event string, v ...interface{}) error
 	EmitToUser(userId int, event string, v ...interface{}) error
-	Run(ctx app_context.Appcontext, engine *gin.Engine) error
+	Run(ctx app_context.AppContext, engine *gin.Engine) error
 }
 
 type RtEngine struct {
@@ -100,7 +100,7 @@ func (e *RtEngine) EmitToUser(userId int, event string, data ...interface{}) err
 	return nil
 }
 
-func (e *RtEngine) Run(appctx app_context.Appcontext, engine *gin.Engine) error {
+func (e *RtEngine) Run(appctx app_context.AppContext, engine *gin.Engine) error {
 	e.server = socketio.NewServer(&engineio.Options{
 		Transports: []transport.Transport{
 			websocket.Default,

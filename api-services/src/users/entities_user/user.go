@@ -1,8 +1,6 @@
 package entities_user
 
 import (
-	"strings"
-
 	"github.com/supersida159/e-commerce/api-services/common"
 	"github.com/supersida159/e-commerce/api-services/pkg/tokenprovider"
 )
@@ -83,13 +81,6 @@ type UserCreate struct {
 
 func (UserCreate) TableName() string {
 	return User{}.TableName()
-}
-func (res *User) Validate() error {
-	res.Email = strings.TrimSpace(res.Email)
-	if len(res.Email) == 0 {
-		return common.ErrNameCannotBeEmpty
-	}
-	return nil
 }
 
 func (u *UserCreate) Mask(hideID bool) {

@@ -13,7 +13,7 @@ type LocationData struct {
 	Longitude float64 `json:"longitude"`
 }
 
-func OnUserUpdateLocation(appCtx app_context.Appcontext, requester common.Requester) func(s socketio.Conn, location LocationData) {
+func OnUserUpdateLocation(appCtx app_context.AppContext, requester common.Requester) func(s socketio.Conn, location LocationData) {
 	return func(s socketio.Conn, location LocationData) {
 		log.Println("User:", s.ID(), "UpdateLocation: ", location)
 		log.Println("User requester:", requester)

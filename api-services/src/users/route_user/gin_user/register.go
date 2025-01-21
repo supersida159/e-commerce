@@ -12,13 +12,13 @@ import (
 	"github.com/supersida159/e-commerce/api-services/src/users/usecase_user"
 )
 
-func Register(appctx app_context.Appcontext) func(c *gin.Context) {
+func Register(appctx app_context.AppContext) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		db := appctx.GetMainDBConnection()
 		var data entities_user.UserCreate
 
 		if err := c.ShouldBind(&data); err != nil {
-			c.JSON(http.StatusBadRequest, common.ErrInvalidRequest(err))
+			c.JSON(http.StatusBadRequest, common.ErrJSONBlindding(err))
 			return
 		}
 		store := repository_user.NewSQLStore(db)

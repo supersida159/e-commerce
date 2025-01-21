@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/IBM/sarama"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"github.com/supersida159/e-commerce/api-services/common"
@@ -12,10 +13,11 @@ import (
 	"github.com/supersida159/e-commerce/api-services/pkg/config"
 	dbs "github.com/supersida159/e-commerce/api-services/pkg/db"
 	"github.com/supersida159/e-commerce/api-services/pkg/goroutineinmain"
-	"github.com/supersida159/e-commerce/api-services/pkg/kafka/consumer"
+	"github.com/supersida159/e-commerce/api-services/pkg/kafka/consumerlocal"
+	kafkaconfig "github.com/supersida159/e-commerce/api-services/pkg/kafka/kafka_config"
 	"github.com/supersida159/e-commerce/api-services/pkg/kafka/producers"
+	"github.com/supersida159/e-commerce/api-services/pkg/localredis"
 	"github.com/supersida159/e-commerce/api-services/pkg/pubsub/pubsublocal"
-	"github.com/supersida159/e-commerce/api-services/pkg/redis"
 	"github.com/supersida159/e-commerce/api-services/pkg/skio"
 	entities_carts "github.com/supersida159/e-commerce/api-services/src/cart/entities_cart"
 	entities_orders "github.com/supersida159/e-commerce/api-services/src/order/entities_order"
@@ -51,7 +53,7 @@ func main() {
 		logrus.Fatal(" Cannot connect to database to AutoMigrate", err)
 	}
 
-	cache := redis.NewRedis(redis.Config{
+	cache := localredis.NewRedis(localredis.Config{
 		Address:  cfg.RedisURI,
 		Password: cfg.RedisPassword,
 		Database: cfg.RedisDB,
@@ -61,34 +63,62 @@ func main() {
 	connectRedis := cache.IsConnected()
 	fmt.Println("connect redis:", connectRedis)
 	localpubsub := pubsublocal.NewPubSub()
-	// Define Kafka consumer configuration
+
+	// Initialize Kafka configuration
+	kafkaConfig := kafkaconfig.KafkaConfig{
+		Brokers:          []string{"localhost:9092"},
+		ConsumerGroup:    "order-service",
+		ProducerMaxRetry: 3,
+		// Add security settings if needed
+	}
+
+	// Configure Kafka
+	saramaConfig, err := kafkaconfig.ConfigureKafka(kafkaConfig)
+	if err != nil {
+		log.Fatalf("Failed to configure Kafka: %v", err)
+	}
+
+	// Create Kafka client
+	client, err := sarama.NewClient(kafkaConfig.Brokers, saramaConfig)
+	if err != nil {
+		log.Fatalf("Failed to create Kafka client: %v", err)
+	}
+	defer client.Close()
+
+	// Ensure topics exist
+	if err := kafkaconfig.EnsureTopicsExist(client); err != nil {
+		log.Fatalf("Failed to create topics: %v", err)
+	} // Define Kafka consumer configuration
 	kafkaconsumerConfig := producers.ConsumerProducerConfig{
 		Brokers: []string{"localhost:9092"}, // Replace with your Kafka brokers
-		Topics: map[producers.ServiceID]string{
-			producers.ServiceID("CREATE_ORDER_SAGA"):   "CREATE_ORDER_SAGA",
-			producers.ServiceID("UPDATE_SAGA_TRACKER"): "UPDATE_SAGA_TRACKER",
-			producers.ServiceID("UPDATE_ROLLBACK"):     "UPDATE_ROLLBACK",
+		Topics: map[kafkaconfig.StepName]string{
+			kafkaconfig.StepName("CREATE_ORDER_SAGA"):   "CREATE_ORDER_SAGA",
+			kafkaconfig.StepName("UPDATE_SAGA_TRACKER"): "UPDATE_SAGA_TRACKER",
+			kafkaconfig.StepName("UPDATE_ROLLBACK"):     "UPDATE_ROLLBACK",
 		},
 		GroupID: "order-service-group",
 	}
 	// Define Kafka producer configuration
 	kafkaproducermConfig := producers.ConsumerProducerConfig{
 		Brokers: []string{"localhost:9092"}, // Replace with your Kafka brokers
-		Topics: map[producers.ServiceID]string{
-			producers.ServiceID("Saga"):      "Saga",
-			producers.ServiceID("Order"):     "Order",
-			producers.ServiceID("Inventory"): "Inventory",
-			producers.ServiceID("Cart"):      "Cart",
-			producers.ServiceID("Central"):   "Central",
+		Topics: map[kafkaconfig.StepName]string{
+			kafkaconfig.StepName("Saga"):      "Saga",
+			kafkaconfig.StepName("Order"):     "Order",
+			kafkaconfig.StepName("Inventory"): "Inventory",
+			kafkaconfig.StepName("Cart"):      "Cart",
+			kafkaconfig.StepName("Central"):   "Central",
 		},
 		GroupID: "order-service-group",
 	}
 
 	orderproducer := producers.NewOrderProducer(kafkaproducermConfig)
+	if orderproducer == nil {
+		logrus.Fatal(" Cannot Create new order producer")
+	}
 	appctx := app_context.NewAppContext(db, localpubsub, cache, orderproducer)
 
 	// Create the consumer
-	orderConsumer, err := consumer.NewOrderConsumer(kafkaconsumerConfig, *orderproducer, appctx)
+	orderConsumer, err := consumerlocal.NewOrderConsumer(kafkaconsumerConfig, *orderproducer, appctx)
 	if err != nil {
 		log.Fatalf("Failed to create consumer: %v", err)
 	}

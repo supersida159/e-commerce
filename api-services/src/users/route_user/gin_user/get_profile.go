@@ -9,7 +9,7 @@ import (
 	"github.com/supersida159/e-commerce/api-services/pkg/app_context"
 )
 
-func GetProfile(appCtx app_context.Appcontext) gin.HandlerFunc {
+func GetProfile(appCtx app_context.AppContext) gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		Data := c.MustGet(common.CurrentUser).(common.Requester)

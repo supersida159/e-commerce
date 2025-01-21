@@ -14,11 +14,11 @@ import (
 	"github.com/supersida159/e-commerce/api-services/src/users/usecase_user"
 )
 
-func Login(appCtx app_context.Appcontext) gin.HandlerFunc {
+func Login(appCtx app_context.AppContext) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var LoginUserData entities_user.UserLogin
 		if err := c.ShouldBind(&LoginUserData); err != nil {
-			panic(common.ErrInvalidRequest(err))
+			panic(common.ErrJSONBlindding(err))
 		}
 		fmt.Println("LoginUserData", LoginUserData)
 		db := appCtx.GetMainDBConnection()
@@ -31,7 +31,7 @@ func Login(appCtx app_context.Appcontext) gin.HandlerFunc {
 		acount, err := business.Login(c.Request.Context(), &LoginUserData)
 
 		if err != nil {
-			c.JSON(http.StatusBadRequest, common.ErrInvalidRequest(err))
+			c.JSON(http.StatusBadRequest, common.ErrInvalidRequestParameter(err))
 			return
 		}
 

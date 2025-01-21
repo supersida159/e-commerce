@@ -3,6 +3,8 @@ package asyncjob
 import (
 	"context"
 	"time"
+
+	"github.com/supersida159/e-commerce/api-services/common"
 )
 
 //job requirement:
@@ -29,7 +31,7 @@ var defaultRetryTime = []time.Duration{1 * time.Second, 5 * time.Second, 10 * ti
 
 type JobState int
 
-type JobHandler func(ctx context.Context) error
+type JobHandler func(ctx context.Context) *common.AppError
 
 const (
 
