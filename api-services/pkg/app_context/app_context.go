@@ -5,6 +5,7 @@ import (
 	"github.com/supersida159/e-commerce/api-services/common"
 	"github.com/supersida159/e-commerce/api-services/pkg/config"
 	dbs "github.com/supersida159/e-commerce/api-services/pkg/db"
+	"github.com/supersida159/e-commerce/api-services/pkg/kafka/consumerlocal"
 	"github.com/supersida159/e-commerce/api-services/pkg/kafka/producers"
 	"github.com/supersida159/e-commerce/api-services/pkg/localredis"
 	"github.com/supersida159/e-commerce/api-services/pkg/pubsub"
@@ -22,6 +23,7 @@ type AppContext interface {
 	GetConfig() *config.Schema
 	GetValidatetor() *common.Validator
 	GetProducer() *producers.OrderProducer
+	GetConsumer() *consumerlocal.SagaConsumer
 }
 
 type AppCtx struct {
@@ -33,9 +35,10 @@ type AppCtx struct {
 	RedisClient *redis.Client
 	Validator   *common.Validator
 	Producer    *producers.OrderProducer
+	Consumer    *consumerlocal.SagaConsumer
 }
 
-func NewAppContext(dbs *dbs.Database, pb pubsub.PubSub, cache *localredis.RedisWRealStore, producer *producers.OrderProducer) *AppCtx {
+func NewAppContext(dbs *dbs.Database, pb pubsub.PubSub, cache *localredis.RedisWRealStore, producer *producers.OrderProducer, consumer *consumerlocal.SagaConsumer) *AppCtx {
 	return &AppCtx{
 		Dbs:        dbs,
 		UpProvider: uploadprovider.NewS3Provider(config.GetConfig().S3BucketName, config.GetConfig().S3Region, config.GetConfig().S3APIKey, config.GetConfig().S3SecretKey, config.GetConfig().S3Domain),
@@ -44,6 +47,7 @@ func NewAppContext(dbs *dbs.Database, pb pubsub.PubSub, cache *localredis.RedisW
 		Cache:      cache,
 		Validator:  common.NewValidator(),
 		Producer:   producer,
+		Consumer:   consumer,
 	}
 }
 
@@ -81,4 +85,8 @@ func (ctx *AppCtx) GetProducer() *producers.OrderProducer {
 
 func (ctx *AppCtx) GetRedisClient() *redis.Client {
 	return ctx.RedisClient
+}
+
+func (ctx *AppCtx) GetConsumer() *consumerlocal.SagaConsumer {
+	return ctx.Consumer
 }

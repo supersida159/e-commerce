@@ -37,15 +37,17 @@ type Schema struct {
 	S3APIKey      string `env:"S3_API_KEY"`
 	S3SecretKey   string `env:"S3_SECRET_KEY"`
 	S3Domain      string `env:"S3_DOMAIN"`
-	Kafka         struct {
-		Brokers              []string `env:"KAFKA_BROKERS"`
-		Retry                int      `env:"KAFKA_RETRY"`
-		ConsumerOffsetReset  string   `env:"KAFKA_CONSUMER_OFFSET_RESET"`
-		ProducerRequiredAcks int      `env:"KAFKA_PRODUCER_REQUIRED_ACKS"`
-		EnableTLS            bool     `env:"KAFKA_ENABLE_TLS"`
-		KafkaVersion         string   `env:"KAFKA_VERSION"`
-		Timeout              int      `env:"KAFKA_TIMEOUT"`
-	}
+	Kafka         KafKa  `env:"KAFKA"`
+}
+
+type KafKa struct {
+	Brokers              []string `env:"KAFKA_BROKERS"`
+	Retry                int      `env:"KAFKA_RETRY"`
+	ConsumerOffsetReset  string   `env:"KAFKA_CONSUMER_OFFSET_RESET"`
+	ProducerRequiredAcks int      `env:"KAFKA_PRODUCER_REQUIRED_ACKS"`
+	EnableTLS            bool     `env:"KAFKA_ENABLE_TLS"`
+	KafkaVersion         string   `env:"KAFKA_VERSION"`
+	Timeout              int      `env:"KAFKA_TIMEOUT"`
 }
 
 var (
@@ -62,6 +64,10 @@ func LoadConfig() *Schema {
 	}
 
 	if err := env.Parse(&cfg); err != nil {
+		log.Fatalf("Error on parsing configuration file, error: %v", err)
+	}
+
+	if err := env.Parse(&cfg.Kafka); err != nil {
 		log.Fatalf("Error on parsing configuration file, error: %v", err)
 	}
 

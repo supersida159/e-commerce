@@ -25,7 +25,7 @@ import (
 
 func main() {
 	// Load configuration
-	cfg := config.GetConfig()
+	cfg := config.LoadConfig()
 
 	// Initialize database
 	db, err := dbs.NewDatabase(cfg.DatabaseURI)
@@ -79,7 +79,7 @@ func main() {
 			data.ServiceStatus.ServiceStates[entities.OrderService] = entities.ServiceState{
 				Status:    entities.ServiceFailed,
 				UpdatedAt: time.Now(),
-				Error:     result.Error(),
+				Error:     result.RootErr.Error(),
 			}
 		} else {
 			data.ServiceStatus.LastUpdated = time.Now()
@@ -108,7 +108,7 @@ func main() {
 			data.ServiceStatus.ServiceStates[entities.OrderService] = entities.ServiceState{
 				Status:    entities.ServiceRollbackFailed,
 				UpdatedAt: time.Now(),
-				Error:     result.Error(),
+				Error:     result.RootErr.Error(),
 			}
 		}
 
@@ -127,13 +127,17 @@ func main() {
 	defer cancel()
 
 	// Start services
-	if err := consumer.Start(ctx); err != nil {
-		log.Fatal("Failed to start consumer:", err)
-	}
+	go func() {
+		if err := consumer.Start(ctx); err != nil {
+			log.Fatal("Failed to start consumer:", err)
+		}
+	}()
 
-	if err := sub.Start(ctx); err != nil {
-		log.Fatal("Failed to start subscriber:", err)
-	}
+	go func() {
+		if err := sub.Start(ctx); err != nil {
+			log.Fatal("Failed to start subscriber:", err)
+		}
+	}()
 
 	// Wait for shutdown signal
 	sigChan := make(chan os.Signal, 1)
@@ -141,4 +145,8 @@ func main() {
 	<-sigChan
 
 	log.Println("Shutting down gracefully...")
+
+	// Clean shutdown
+	sub.Stop()
+	consumer.Stop()
 }

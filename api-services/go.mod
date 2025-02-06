@@ -27,6 +27,7 @@ require (
 	github.com/kr/text v0.2.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.21 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
+	golang.org/x/sync v0.10.0 // indirect
 )
 
 require (

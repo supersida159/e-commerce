@@ -14,7 +14,7 @@ type Cart struct {
 	common.SQLModel `json:",inline"`
 	UserID          int                          `gorm:"index;column:UserID" json:"user_id"`
 	User            *entities_user.User          `gorm:"foreignKey:UserID" json:"user"`
-	Items           []*entities_product.CartItem `gorm:"foreignKey:CartID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"items"`
+	Items           []*entities_product.CartItem `gorm:"foreignKey:CartID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"items"`
 }
 
 // CartItem represents an item in the shopping cart.

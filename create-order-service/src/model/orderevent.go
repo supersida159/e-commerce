@@ -77,6 +77,42 @@ const (
 	ServiceRollbackFailed
 )
 
+// String returns the string representation of the ServiceStatusNumber.
+func (s ServiceStatusNumber) String() string {
+	switch s {
+	case ServiceInit:
+		return "ServiceInit"
+	case ServicePending:
+		return "ServicePending"
+	case ServiceProcessing:
+		return "ServiceProcessing"
+	case ServiceSuccess:
+		return "ServiceSuccess"
+	case ServiceFailed:
+		return "ServiceFailed"
+	case ServiceCancelled:
+		return "ServiceCancelled"
+	case ServiceTimedOut:
+		return "ServiceTimedOut"
+	case ServiceSentFailed:
+		return "ServiceSentFailed"
+	case ServiceCompensating:
+		return "ServiceCompensating"
+	case ServiceCompensated:
+		return "ServiceCompensated"
+	case ServiceRollbackInitiated:
+		return "ServiceRollbackInitiated"
+	case ServiceRollbackInProgress:
+		return "ServiceRollbackInProgress"
+	case ServiceRollbackSuccess:
+		return "ServiceRollbackSuccess"
+	case ServiceRollbackFailed:
+		return "ServiceRollbackFailed"
+	default:
+		return fmt.Sprintf("Unknown ServiceStatusNumber (%d)", s)
+	}
+}
+
 // Event types for the saga orchestration
 const (
 	// Saga Lifecycle Events
@@ -138,7 +174,16 @@ func newServiceStatus() ServiceStatus {
 	}
 }
 
-// UpdateServiceStatus updates the status of a specific service
+// UpdateStatus updates the status of a specific service
+func (e *OrderEvent) UpdateStatus(status ServiceStatusNumber, errMsg string) error {
+
+	e.ServiceStatus.Status = status
+	e.UpdatedAt = time.Now()
+	e.Version++
+
+	return nil
+}
+
 func (e *OrderEvent) UpdateServiceStatus(service ServiceName, status ServiceStatusNumber, errMsg string) error {
 	state, exists := e.ServiceStatus.ServiceStates[service]
 	if !exists {

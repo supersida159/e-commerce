@@ -15,8 +15,8 @@ import (
 //4. we should have job manager to manage job
 
 type Job interface {
-	Excute(ctx context.Context) error
-	Retry(ctx context.Context) error
+	Excute(ctx context.Context) *common.AppError
+	Retry(ctx context.Context) *common.AppError
 	State() JobState
 	RetryIndex() int
 	SetRetryDuration(time []time.Duration)
@@ -28,6 +28,41 @@ const (
 )
 
 var defaultRetryTime = []time.Duration{1 * time.Second, 5 * time.Second, 10 * time.Second}
+
+func getRetryTimes(n int) []time.Duration {
+	if n <= 0 {
+		return []time.Duration{} // Handle non-positive n
+	}
+
+	result := make([]time.Duration, 0, n)
+	defaultLen := len(defaultRetryTime)
+
+	if defaultLen > 0 {
+		// Take elements from defaultRetryTime first
+		take := min(n, defaultLen)
+		result = append(result, defaultRetryTime[:take]...)
+		remaining := n - take
+
+		// Double the last duration for remaining elements
+		if remaining > 0 {
+			lastDuration := defaultRetryTime[take-1]
+			for i := 0; i < remaining; i++ {
+				lastDuration *= 2
+				result = append(result, lastDuration)
+			}
+		}
+	} else {
+		// Edge case: If defaultRetryTime is empty, start with 1s and double
+		lastDuration := 1 * time.Second
+		result = append(result, lastDuration)
+		for i := 1; i < n; i++ {
+			lastDuration *= 2
+			result = append(result, lastDuration)
+		}
+	}
+
+	return result
+}
 
 type JobState int
 
@@ -63,11 +98,20 @@ type job struct {
 	stopChan   chan bool
 }
 
-func NewJob(handler JobHandler) *job {
+func NewJob(handler JobHandler, retries ...int) *job {
+	var retry int
+	if len(retries) > 1 {
+		retry = retries[0]
+	} else {
+		retry = 0
+	}
+	if retry <= 0 {
+		retry = defaultMaxRetryCount
+	}
 	j := job{
 		config: JobConfig{
 			MaxTimeOut: defaultMaxTimeOut,
-			Retries:    defaultRetryTime,
+			Retries:    getRetryTimes(retry),
 		},
 		handler:    handler,
 		state:      StateInit,
@@ -78,7 +122,7 @@ func NewJob(handler JobHandler) *job {
 	return &j
 }
 
-func (j *job) Excute(ctx context.Context) error {
+func (j *job) Excute(ctx context.Context) *common.AppError {
 	j.state = StateRunning
 
 	err := j.handler(ctx)
@@ -90,7 +134,7 @@ func (j *job) Excute(ctx context.Context) error {
 	return nil
 }
 
-func (j *job) Retry(ctx context.Context) error {
+func (j *job) Retry(ctx context.Context) *common.AppError {
 	j.retryIndex++
 
 	time.Sleep(j.config.Retries[j.retryIndex])

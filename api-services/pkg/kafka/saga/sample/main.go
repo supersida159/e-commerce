@@ -5,7 +5,6 @@ import (
 	"log"
 	"time"
 
-	"github.com/supersida159/e-commerce/api-services/common"
 	"github.com/supersida159/e-commerce/api-services/pkg/app_context"
 	"github.com/supersida159/e-commerce/api-services/pkg/config" // Make sure to import the config package
 	dbs "github.com/supersida159/e-commerce/api-services/pkg/db"
@@ -23,8 +22,9 @@ func main() {
 
 	// Setup application context
 	brokers := cfg.Kafka.Broker // Using brokers from the config
+	newKafkaConfig := kafkaconfig.NewKafkaConfig(brokers)
 	// Initialize Kafka producer
-	producer, err := producers.NewOrderProducer(brokers, cfg) // Pass config.Schema to producer
+	producer, err := producers.NewOrderProducer(newKafkaConfig) // Pass config.Schema to producer
 	if err != nil {
 		log.Fatalf("Failed to create producer: %v", err)
 	}
@@ -46,41 +46,46 @@ func main() {
 
 	// Initialize database connection (placeholder)
 
-	// Create application context
-	appCtx := app_context.NewAppContext(dbInstance, pubSub, redisCache, producer)
-
 	// Initialize Kafka consumer using config.Schema
-	consumer, err := consumerlocal.NewSagaConsumer(cfg, brokers, kafkaconfig.OrchestratorService, appCtx) // Pass config.Schema to consumer
+	consumer, err := consumerlocal.NewSagaConsumer(newKafkaConfig, brokers, kafkaconfig.OrchestratorService) // Pass config.Schema to consumer
 	if err != nil {
 		log.Fatalf("Failed to create consumer: %v", err)
 	}
-
+	// Create application context
+	appCtx := app_context.NewAppContext(dbInstance, pubSub, redisCache, producer, consumer)
 	// Initialize Orchestrator
-	orchestrator := saga.NewOrchestrator(producer, appCtx, consumer)
+	orchestrator := saga.NewOrchestrator(appCtx)
 
 	// Simulate a saga order event
-	orderEvent := &entities_orders.OrderEvent{
-		SagaID: common.GenerateCode("saga"),
-	}
-
+	orderEvent := entities_orders.NewOrderEvent(&entities_orders.Order{}, entities_orders.EventSagaStarted)
+	orderEvent.SagaID = "test-saga-id"
 	// Start the saga process
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
-
-	err = orchestrator.StartSaga(ctx, orderEvent)
-	if err != nil {
-		log.Fatalf("Failed to start saga: %v", err)
-	}
-
-	log.Println("Saga process started successfully.")
-
-	// Run consumer in the background
 	go func() {
 		err := consumer.Start(ctx)
 		if err != nil {
 			log.Printf("Consumer error: %v", err)
 		}
 	}()
+	// Run consumer in the background
+	time.Sleep(1 * time.Second)
+
+	go func() {
+		updateRollbackChannel, _ := consumer.GetEventChannel("", consumerlocal.RollbackUpdateChannel)
+		m := <-updateRollbackChannel
+		log.Printf("Received Update rollback event: %v", m)
+	}()
+	go func() {
+		orchestrator.StartRollbackSingleListener(ctx)
+	}()
+
+	// err = orchestrator.StartSaga(ctx, &orderEvent)
+	// if err != nil {
+	// 	log.Fatalf("Failed to start saga: %v", err)
+	// }
+
+	log.Println("Saga process started successfully.")
 
 	// Wait to observe the saga processing
 	time.Sleep(30 * time.Minute)

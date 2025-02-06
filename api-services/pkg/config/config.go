@@ -64,6 +64,9 @@ func LoadConfig() *Schema {
 	if err := env.Parse(&cfg); err != nil {
 		log.Fatalf("Error on parsing configuration file, error: %v", err)
 	}
+	if err := env.Parse(&cfg.Kafka); err != nil {
+		log.Fatalf("Error on parsing configuration file, error: %v", err)
+	}
 
 	return &cfg
 }

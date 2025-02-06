@@ -29,6 +29,41 @@ const (
 
 var defaultRetryTime = []time.Duration{1 * time.Second, 5 * time.Second, 10 * time.Second}
 
+func getRetryTimes(n int) []time.Duration {
+	if n <= 0 {
+		return []time.Duration{} // Handle non-positive n
+	}
+
+	result := make([]time.Duration, 0, n)
+	defaultLen := len(defaultRetryTime)
+
+	if defaultLen > 0 {
+		// Take elements from defaultRetryTime first
+		take := min(n, defaultLen)
+		result = append(result, defaultRetryTime[:take]...)
+		remaining := n - take
+
+		// Double the last duration for remaining elements
+		if remaining > 0 {
+			lastDuration := defaultRetryTime[take-1]
+			for i := 0; i < remaining; i++ {
+				lastDuration *= 2
+				result = append(result, lastDuration)
+			}
+		}
+	} else {
+		// Edge case: If defaultRetryTime is empty, start with 1s and double
+		lastDuration := 1 * time.Second
+		result = append(result, lastDuration)
+		for i := 1; i < n; i++ {
+			lastDuration *= 2
+			result = append(result, lastDuration)
+		}
+	}
+
+	return result
+}
+
 type JobState int
 
 type JobHandler func(ctx context.Context) *common.AppError
@@ -63,11 +98,11 @@ type job struct {
 	stopChan   chan bool
 }
 
-func NewJob(handler JobHandler) *job {
+func NewJob(handler JobHandler, retry int) *job {
 	j := job{
 		config: JobConfig{
 			MaxTimeOut: defaultMaxTimeOut,
-			Retries:    defaultRetryTime,
+			Retries:    getRetryTimes(retry),
 		},
 		handler:    handler,
 		state:      StateInit,

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/IBM/sarama"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"github.com/supersida159/e-commerce/api-services/common"
@@ -16,14 +15,15 @@ import (
 	"github.com/supersida159/e-commerce/api-services/pkg/kafka/consumerlocal"
 	kafkaconfig "github.com/supersida159/e-commerce/api-services/pkg/kafka/kafka_config"
 	"github.com/supersida159/e-commerce/api-services/pkg/kafka/producers"
+	"github.com/supersida159/e-commerce/api-services/pkg/kafka/saga"
 	"github.com/supersida159/e-commerce/api-services/pkg/localredis"
 	"github.com/supersida159/e-commerce/api-services/pkg/pubsub/pubsublocal"
 	"github.com/supersida159/e-commerce/api-services/pkg/skio"
+	"github.com/supersida159/e-commerce/api-services/pkg/subscriber"
 	entities_carts "github.com/supersida159/e-commerce/api-services/src/cart/entities_cart"
 	entities_orders "github.com/supersida159/e-commerce/api-services/src/order/entities_order"
 	"github.com/supersida159/e-commerce/api-services/src/product/entities_product"
 	httpServer "github.com/supersida159/e-commerce/api-services/src/server"
-	subscriber "github.com/supersida159/e-commerce/api-services/src/subcriber"
 	"github.com/supersida159/e-commerce/api-services/src/users/entities_user"
 	"github.com/supersida159/e-commerce/api-services/src/users/repository_user"
 )
@@ -64,64 +64,22 @@ func main() {
 	fmt.Println("connect redis:", connectRedis)
 	localpubsub := pubsublocal.NewPubSub()
 
-	// Initialize Kafka configuration
-	kafkaConfig := kafkaconfig.KafkaConfig{
-		Brokers:          []string{"localhost:9092"},
-		ConsumerGroup:    "order-service",
-		ProducerMaxRetry: 3,
-		// Add security settings if needed
-	}
-
-	// Configure Kafka
-	saramaConfig, err := kafkaconfig.ConfigureKafka(kafkaConfig)
+	brokers := cfg.Kafka.Broker
+	newKafkaConfig := kafkaconfig.NewKafkaConfig(brokers)
+	producer, err := producers.NewOrderProducer(newKafkaConfig) // Pass config.Schema to producer
 	if err != nil {
-		log.Fatalf("Failed to configure Kafka: %v", err)
+		log.Fatalf("Failed to create producer: %v", err)
 	}
+	defer producer.Close()
 
-	// Create Kafka client
-	client, err := sarama.NewClient(kafkaConfig.Brokers, saramaConfig)
-	if err != nil {
-		log.Fatalf("Failed to create Kafka client: %v", err)
-	}
-	defer client.Close()
-
-	// Ensure topics exist
-	if err := kafkaconfig.EnsureTopicsExist(client); err != nil {
-		log.Fatalf("Failed to create topics: %v", err)
-	} // Define Kafka consumer configuration
-	kafkaconsumerConfig := producers.ConsumerProducerConfig{
-		Brokers: []string{"localhost:9092"}, // Replace with your Kafka brokers
-		Topics: map[kafkaconfig.StepName]string{
-			kafkaconfig.StepName("CREATE_ORDER_SAGA"):   "CREATE_ORDER_SAGA",
-			kafkaconfig.StepName("UPDATE_SAGA_TRACKER"): "UPDATE_SAGA_TRACKER",
-			kafkaconfig.StepName("UPDATE_ROLLBACK"):     "UPDATE_ROLLBACK",
-		},
-		GroupID: "order-service-group",
-	}
-	// Define Kafka producer configuration
-	kafkaproducermConfig := producers.ConsumerProducerConfig{
-		Brokers: []string{"localhost:9092"}, // Replace with your Kafka brokers
-		Topics: map[kafkaconfig.StepName]string{
-			kafkaconfig.StepName("Saga"):      "Saga",
-			kafkaconfig.StepName("Order"):     "Order",
-			kafkaconfig.StepName("Inventory"): "Inventory",
-			kafkaconfig.StepName("Cart"):      "Cart",
-			kafkaconfig.StepName("Central"):   "Central",
-		},
-		GroupID: "order-service-group",
-	}
-
-	orderproducer := producers.NewOrderProducer(kafkaproducermConfig)
-	if orderproducer == nil {
-		logrus.Fatal(" Cannot Create new order producer")
-	}
-	appctx := app_context.NewAppContext(db, localpubsub, cache, orderproducer)
-
-	// Create the consumer
-	orderConsumer, err := consumerlocal.NewOrderConsumer(kafkaconsumerConfig, *orderproducer, appctx)
+	// Initialize Kafka consumer using config.Schema
+	consumer, err := consumerlocal.NewSagaConsumer(newKafkaConfig, brokers, kafkaconfig.OrchestratorService) // Pass config.Schema to consumer
 	if err != nil {
 		log.Fatalf("Failed to create consumer: %v", err)
 	}
+	// C
+
+	appctx := app_context.NewAppContext(db, localpubsub, cache, producer, consumer)
 
 	err = goroutineinmain.RunExpireOrder(appctx)
 	if err != nil {
@@ -129,35 +87,25 @@ func main() {
 	}
 
 	rtengine := skio.NewEngine()
-
-	if err := subscriber.NewEngine(appctx, rtengine).Start(); err != nil {
+	newOrchestrator := saga.NewOrchestrator(appctx)
+	if err := subscriber.NewEngine(appctx, newOrchestrator).Start(); err != nil {
 		log.Fatalln(err)
 	}
+	// Start consumer in main
+	ctx := context.Background()
+	go func() {
+		if err := consumer.Start(ctx); err != nil {
+			log.Fatalf("Consumer failed: %v", err)
+		}
+	}()
 
-	httpSvr := httpServer.NewServer(appctx)
+	httpSvr := httpServer.NewServer(appctx, newOrchestrator)
 
 	httpSvr.GetEngine().Use(CORSMiddleware())
 	if err = httpSvr.Run(rtengine); err != nil {
 		logrus.Fatal(" Cannot runHttp server", err)
 	}
 
-	// Create a context that we can cancel
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// Start the consumer
-	if err := orderConsumer.Start(ctx); err != nil {
-		log.Fatalf("Failed to start consumer: %v", err)
-	}
-
-	// run below code with Grpc
-
-	// go func() {
-	// 	httpSvr := httpServer.NewServer(appctx)
-	// 	if err = httpSvr.Run(); err != nil {
-	// 		logrus.Fatal(err)
-	// 	}
-	// }()
 }
 func CORSMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {

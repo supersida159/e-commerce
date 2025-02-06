@@ -1,198 +1,261 @@
 package kafkaconfig
 
 import (
+	"context"
 	"fmt"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/IBM/sarama"
+	"golang.org/x/sync/errgroup"
 )
 
-// ServiceID represents different services
+// ServiceID represents different services in the ecosystem
 type ServiceID string
 
 const (
-	OrchestratorService ServiceID = "Orchestrator"
-	OrderService        ServiceID = "Order"
-	InventoryService    ServiceID = "Inventory"
-	CartService         ServiceID = "Cart"
+	OrchestratorService ServiceID = "orchestrator"
+	OrderService        ServiceID = "order"
+	InventoryService    ServiceID = "inventory"
+	CartService         ServiceID = "cart"
 )
 
-// TopicConfig holds the configuration for Kafka topics
-type TopicConfig struct {
-	Name              string
-	NumPartitions     int32
-	ReplicationFactor int16
-	RetentionTime     time.Duration
-	Configs           map[string]string
-}
-
-// KafkaTopics defines the topics for saga orchestration
 var KafkaTopics = struct {
-	// Create order topic - single partition, multiple consumers
-	CreateOrder string
-
-	// Update order status topic - single partition for ordered updates
-	UpdateOrder string
-
-	// Individual rollback topics for each service
+	CreateOrder       string
+	UpdateOrder       string
+	UpdateRollback    string
 	RollbackOrder     string
-	RollbackInventory string
 	RollbackCart      string
-
-	// Update rollback status topic
-	UpdateRollback string
+	RollbackInventory string
 }{
 	CreateOrder:       "saga.create.order",
 	UpdateOrder:       "saga.update.order",
-	RollbackOrder:     "saga.rollback.order",
-	RollbackInventory: "saga.rollback.inventory",
-	RollbackCart:      "saga.rollback.cart",
 	UpdateRollback:    "saga.update.rollback",
+	RollbackOrder:     "saga.rollback.order",
+	RollbackCart:      "saga.rollback.cart",
+	RollbackInventory: "saga.rollback.inventory",
 }
 
-func GetTopicConfigs() []TopicConfig {
-	sagaRetention := 24 * time.Hour * 2 // 2 days retention
-
-	baseConfig := map[string]string{
-		"cleanup.policy":         "delete",
-		"retention.bytes":        "536870912", // 512MB
-		"message.timestamp.type": "CreateTime",
-		"max.message.bytes":      "1048576", // 1MB max message size
-	}
-
-	return []TopicConfig{
-		{
-			Name:              KafkaTopics.CreateOrder,
-			NumPartitions:     1, // Single partition for ordered processing
-			ReplicationFactor: 1,
-			RetentionTime:     sagaRetention,
-			Configs:           baseConfig,
-		},
-		{
-			Name:              KafkaTopics.UpdateOrder,
-			NumPartitions:     1, // Single partition for ordered updates
-			ReplicationFactor: 1,
-			RetentionTime:     sagaRetention,
-			Configs:           baseConfig,
-		},
-		{
-			Name:              KafkaTopics.RollbackOrder,
-			NumPartitions:     1, // One partition per rollback topic
-			ReplicationFactor: 1,
-			RetentionTime:     sagaRetention,
-			Configs:           baseConfig,
-		},
-		{
-			Name:              KafkaTopics.RollbackInventory,
-			NumPartitions:     1,
-			ReplicationFactor: 1,
-			RetentionTime:     sagaRetention,
-			Configs:           baseConfig,
-		},
-		{
-			Name:              KafkaTopics.RollbackCart,
-			NumPartitions:     1,
-			ReplicationFactor: 1,
-			RetentionTime:     sagaRetention,
-			Configs:           baseConfig,
-		},
-		{
-			Name:              KafkaTopics.UpdateRollback,
-			NumPartitions:     1,
-			ReplicationFactor: 1,
-			RetentionTime:     sagaRetention,
-			Configs:           baseConfig,
-		},
-	}
+// TopicConfig defines complete Kafka topic configuration
+type TopicConfig struct {
+	Name              string
+	Partitions        int32
+	ReplicationFactor int16
+	Configs           []TopicProperty
 }
 
-// GetConsumerGroupMapping returns consumer group IDs for each service
-func GetConsumerGroupMapping() map[ServiceID]string {
-	return map[ServiceID]string{
-		OrderService:        "order-service-group",
-		InventoryService:    "inventory-service-group",
-		CartService:         "cart-service-group",
-		OrchestratorService: "orchestrator-service-group",
+type TopicProperty struct {
+	Key   string
+	Value string
+}
+
+// KafkaConfig wraps all Kafka configuration parameters
+type KafkaConfig struct {
+	Brokers    []string
+	Producer   *sarama.Config
+	Consumer   *sarama.Config
+	admin      sarama.ClusterAdmin
+	adminOnce  sync.Once
+	adminMutex sync.Mutex
+}
+
+var (
+	defaultRetention = 7 * 24 * time.Hour
+	topicRegistry    = map[string]TopicConfig{
+		KafkaTopics.CreateOrder: {
+			Partitions:        6,
+			ReplicationFactor: 3,
+			Configs: []TopicProperty{
+				{Key: "cleanup.policy", Value: "compact"},
+				{Key: "retention.ms", Value: fmt.Sprintf("%d", defaultRetention.Milliseconds())},
+			},
+		},
+		KafkaTopics.UpdateOrder: {
+			Partitions:        1,
+			ReplicationFactor: 3,
+			Configs: []TopicProperty{
+				{Key: "cleanup.policy", Value: "delete"},
+				{Key: "retention.ms", Value: fmt.Sprintf("%d", defaultRetention.Milliseconds())},
+			},
+		},
+		KafkaTopics.RollbackOrder:     createRollbackTopicConfig(),
+		KafkaTopics.RollbackInventory: createRollbackTopicConfig(),
+		KafkaTopics.RollbackCart:      createRollbackTopicConfig(),
+		KafkaTopics.UpdateRollback:    createRollbackTopicConfig(),
+	}
+)
+
+// NewKafkaConfig creates a new validated Kafka configuration
+func NewKafkaConfig(brokers []string) *KafkaConfig {
+	return &KafkaConfig{
+		Brokers:  brokers,
+		Producer: createProducerConfig(),
+		Consumer: createConsumerConfig(""),
 	}
 }
 
-// GetServiceTopicMapping returns which topics each service should listen to
-func GetServiceTopicMapping() map[ServiceID][]string {
-	return map[ServiceID][]string{
-		// Orchestrator listens to update status and sends rollbacks
-		OrchestratorService: {
-			KafkaTopics.UpdateOrder,
-			KafkaTopics.UpdateRollback,
-		},
-		// Services listen to create order and their specific rollback topics
-		OrderService: {
-			KafkaTopics.CreateOrder,
-			KafkaTopics.RollbackOrder,
-		},
-		InventoryService: {
-			KafkaTopics.CreateOrder,
-			KafkaTopics.RollbackInventory,
-		},
-		CartService: {
-			KafkaTopics.CreateOrder,
-			KafkaTopics.RollbackCart,
-		},
-	}
-}
-
-// InitKafkaTopics creates the Kafka topics based on the configurations
-func InitKafkaTopics(brokerList []string) error {
-	// Create Sarama configuration
+// In your kafkaconfig package's producer configuration
+func createProducerConfig() *sarama.Config {
 	config := sarama.NewConfig()
-	config.Version = sarama.V2_8_0_0 // Adjust based on your Kafka version
+	config.Version = sarama.V3_4_0_0
 
-	// Create ClusterAdmin client
-	admin, err := sarama.NewClusterAdmin(brokerList, config)
+	// Required for SyncProducer
+	config.Producer.Return.Successes = true // 👈 Add this line
+
+	// Idempotent producer settings
+	config.Producer.Idempotent = true
+	config.Net.MaxOpenRequests = 1
+
+	// Exactly-once semantics requirements
+	config.Producer.RequiredAcks = sarama.WaitForAll
+	config.Producer.Retry.Max = 5
+	config.Producer.Retry.Backoff = 1 * time.Second
+
+	// Optional optimizations
+	config.Producer.Compression = sarama.CompressionSnappy
+	return config
+}
+
+// SaramaConfig returns the appropriate Sarama configuration
+func (kc *KafkaConfig) SaramaConfig(isProducer bool) *sarama.Config {
+	if isProducer {
+		return kc.Producer
+	}
+	return kc.Consumer
+}
+
+// InitializeTopology creates all required topics
+func (kc *KafkaConfig) InitializeTopology(ctx context.Context) error {
+	admin, err := kc.getClusterAdmin()
 	if err != nil {
-		return fmt.Errorf("failed to create Kafka cluster admin: %w", err)
+		return err
 	}
-	defer admin.Close()
+	defer kc.closeAdmin()
 
-	// Fetch topic configurations
-	topicConfigs := GetTopicConfigs()
+	existingTopics, err := admin.ListTopics()
+	if err != nil {
+		return fmt.Errorf("failed to list existing topics: %w", err)
+	}
 
-	// Loop through each topic and create it
-	for _, topicConfig := range topicConfigs {
-		// Convert retention time to milliseconds
-		retentionMs := fmt.Sprintf("%d", topicConfig.RetentionTime.Milliseconds())
+	var (
+		g, _     = errgroup.WithContext(ctx)
+		mu       sync.Mutex
+		errSlice []error
+	)
 
-		// Merge default configs with specific topic configs
-		configs := topicConfig.Configs
-		configs["retention.ms"] = retentionMs
-
-		// Convert map[string]string to map[string]*string
-		configEntries := make(map[string]*string)
-		for key, value := range configs {
-			val := value // Create a new variable to take the address
-			configEntries[key] = &val
+	for name, cfg := range topicRegistry {
+		if _, exists := existingTopics[name]; exists {
+			log.Printf("Topic %s already exists", name)
+			continue
 		}
 
-		// Prepare Sarama TopicDetail
-		detail := &sarama.TopicDetail{
-			NumPartitions:     topicConfig.NumPartitions,
-			ReplicationFactor: topicConfig.ReplicationFactor,
-			ConfigEntries:     configEntries,
-		}
-
-		// Create the topic
-		err := admin.CreateTopic(topicConfig.Name, detail, false)
-		if err != nil {
-			// Log if the topic already exists, continue with other topics
-			if err == sarama.ErrTopicAlreadyExists {
-				log.Printf("Topic %s already exists\n", topicConfig.Name)
-				continue
+		name, cfg := name, cfg
+		g.Go(func() error {
+			detail := sarama.TopicDetail{
+				NumPartitions:     cfg.Partitions,
+				ReplicationFactor: cfg.ReplicationFactor,
+				ConfigEntries:     make(map[string]*string),
 			}
-			return fmt.Errorf("failed to create topic %s: %w", topicConfig.Name, err)
-		}
 
-		log.Printf("Successfully created topic: %s\n", topicConfig.Name)
+			for _, prop := range cfg.Configs {
+				val := prop.Value
+				detail.ConfigEntries[prop.Key] = &val
+			}
+
+			if err := admin.CreateTopic(name, &detail, false); err != nil {
+				mu.Lock()
+				errSlice = append(errSlice, fmt.Errorf("failed to create topic %s: %w", name, err))
+				mu.Unlock()
+			}
+			return nil
+		})
 	}
 
+	if err := g.Wait(); err != nil {
+		return fmt.Errorf("topic creation failed: %w", err)
+	}
+
+	if len(errSlice) > 0 {
+		return fmt.Errorf("topic creation errors: %v", errSlice)
+	}
+
+	return nil
+}
+
+// GetServiceTopics returns topics for a specific service
+func GetServiceTopics(service ServiceID) []string {
+	switch service {
+	case OrchestratorService:
+		return []string{"saga.update.order", "saga.update.rollback"}
+	case OrderService:
+		return []string{"saga.create.order", "saga.rollback.order"}
+	case InventoryService:
+		return []string{"saga.create.order", "saga.rollback.inventory"}
+	case CartService:
+		return []string{"saga.create.order", "saga.rollback.cart"}
+	default:
+		return nil
+	}
+}
+
+// ConsumerGroupName generates consumer group ID for a service
+func ConsumerGroupName(service ServiceID) string {
+	return fmt.Sprintf("%s-consumer-group", service)
+}
+
+func createRollbackTopicConfig() TopicConfig {
+	return TopicConfig{
+		Partitions:        3,
+		ReplicationFactor: 3,
+		Configs: []TopicProperty{
+			{Key: "cleanup.policy", Value: "compact"},
+			{Key: "retention.ms", Value: fmt.Sprintf("%d", (30 * 24 * time.Hour).Milliseconds())},
+			{Key: "min.compaction.lag.ms", Value: "3600000"},
+		},
+	}
+}
+
+func createConsumerConfig(groupID string) *sarama.Config {
+	config := sarama.NewConfig()
+	config.Version = sarama.V3_4_0_0
+	config.Consumer.Group.Rebalance.GroupStrategies = []sarama.BalanceStrategy{
+		sarama.BalanceStrategySticky,
+	}
+	config.Consumer.Offsets.Initial = sarama.OffsetOldest
+	config.Consumer.Offsets.AutoCommit.Enable = true
+	config.Consumer.Offsets.AutoCommit.Interval = 5 * time.Second
+	config.ClientID = groupID
+	return config
+}
+
+func (kc *KafkaConfig) getClusterAdmin() (sarama.ClusterAdmin, error) {
+	var err error
+	kc.adminOnce.Do(func() {
+		kc.adminMutex.Lock()
+		defer kc.adminMutex.Unlock()
+		kc.admin, err = sarama.NewClusterAdmin(kc.Brokers, kc.Producer)
+	})
+	return kc.admin, err
+}
+
+func (kc *KafkaConfig) closeAdmin() {
+	kc.adminMutex.Lock()
+	defer kc.adminMutex.Unlock()
+	if kc.admin != nil {
+		kc.admin.Close()
+		kc.admin = nil
+	}
+	kc.adminOnce = sync.Once{}
+}
+
+// Validate checks configuration validity
+func (kc *KafkaConfig) Validate() error {
+	if len(kc.Brokers) == 0 {
+		return fmt.Errorf("at least one broker required")
+	}
+	if kc.Producer == nil || kc.Consumer == nil {
+		return fmt.Errorf("missing producer/consumer configuration")
+	}
 	return nil
 }

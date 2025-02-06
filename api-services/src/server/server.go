@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/supersida159/e-commerce/api-services/pkg/app_context"
 	"github.com/supersida159/e-commerce/api-services/pkg/config"
+	"github.com/supersida159/e-commerce/api-services/pkg/kafka/saga"
 	"github.com/supersida159/e-commerce/api-services/pkg/skio"
 	"github.com/supersida159/e-commerce/api-services/src/cart/route_cart"
 	"github.com/supersida159/e-commerce/api-services/src/order/route_order"
@@ -19,15 +20,17 @@ import (
 type Server struct {
 	appCtx app_context.AppContext
 	engine *gin.Engine
+	saga   *saga.Orchestrator
 }
 
 func (s Server) GetAppContext() app_context.AppContext {
 	return s.appCtx
 }
-func NewServer(appCtx app_context.AppContext) *Server {
+func NewServer(appCtx app_context.AppContext, saga *saga.Orchestrator) *Server {
 	return &Server{
 		appCtx: appCtx,
 		engine: gin.Default(),
+		saga:   saga,
 	}
 }
 
@@ -63,7 +66,7 @@ func (s *Server) MapRoutes() error {
 	route_user.Routes(v1.Group("/user"), s.appCtx)
 	// route_upload.Routes(v1.Group("/upload"), s.appCtx)
 	route_product.Routes(v1.Group("/product"), s.appCtx)
-	route_order.Routes(v1.Group("/order"), s.appCtx)
+	route_order.Routes(v1.Group("/order"), s.appCtx, s.saga)
 	route_cart.Routes(v1.Group("/cart"), s.appCtx)
 	v1.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{

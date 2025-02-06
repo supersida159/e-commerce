@@ -2,6 +2,7 @@ package subscriber
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"sync"
 
@@ -54,13 +55,14 @@ func (s *Subscriber) Start(ctx context.Context) error {
 
 func (s *Subscriber) handleEvents(ctx context.Context, channelType string, ch chan *entities.OrderEvent) {
 	defer s.wg.Done()
-
+	fmt.Println("handleEvents: ", channelType)
 	for {
 		select {
 		case event, ok := <-ch:
 			if !ok {
 				return
 			}
+
 			s.processEvent(ctx, channelType, event)
 		case <-ctx.Done():
 			return

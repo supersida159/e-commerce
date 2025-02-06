@@ -155,7 +155,7 @@ func (c *SagaConsumer) GetEventChannel(channelType string) (chan *entities.Order
 }
 
 func (c *SagaConsumer) ProcessMessage(ctx context.Context, msg *sarama.ConsumerMessage) error {
-	var event *entities.OrderEvent
+	event := &entities.OrderEvent{} // Initialize the struct
 	if err := json.Unmarshal(msg.Value, event); err != nil {
 		return fmt.Errorf("failed to unmarshal message: %w", err)
 	}
@@ -165,9 +165,11 @@ func (c *SagaConsumer) ProcessMessage(ctx context.Context, msg *sarama.ConsumerM
 	switch msg.Topic {
 	case kafkaconfig.KafkaTopics.CreateOrder:
 		c.createChannel <- event
+		fmt.Println("event:", CreateOrderChannel)
 		return nil
-	case kafkaconfig.KafkaTopics.UpdateRollback:
+	case kafkaconfig.KafkaTopics.RollbackOrder:
 		c.rollbackChannel <- event
+		fmt.Println("event:", RollbackChannel)
 		return nil
 	default:
 		return fmt.Errorf("unknown topic: %s", msg.Topic)
