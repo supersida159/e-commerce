@@ -940,3 +940,17 @@ func ErrDB(err ...error) *AppError {
 		http.StatusInternalServerError,
 	)
 }
+func ErrInvalidCart(err ...error) *AppError {
+	var rootErr error
+	if len(err) > 0 {
+		rootErr = err[0]
+	}
+	return NewErrorResponse(
+		rootErr,
+		"Invalid cart data",
+		"Dữ liệu giỏ hàng không hợp lệ",
+		"INVALID_CART",
+		CodeInvalidRequestParameter,
+		http.StatusBadRequest,
+	)
+}

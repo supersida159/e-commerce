@@ -249,7 +249,8 @@ func (c *SagaConsumer) ProcessMessage(ctx context.Context, msg *sarama.ConsumerM
 	}
 }
 func (c *SagaConsumer) HandleUpdateStatus(ctx context.Context, event *entities_orders.OrderEvent) error {
-	if c.SagaStates[event.SagaID].ServiceStatus.Status != entities_orders.ServicePending {
+	if c.SagaStates[event.SagaID].ServiceStatus.Status != entities_orders.ServicePending &&
+		c.SagaStates[event.SagaID].ServiceStatus.Status != entities_orders.ServiceProcessing {
 		return c.routeToChannel(ctx, event.SagaID, RollbackSingleChannel, *event)
 	} else {
 		return c.routeToChannel(ctx, event.SagaID, UpdateChannel, *event)

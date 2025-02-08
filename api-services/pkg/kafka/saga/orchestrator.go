@@ -71,6 +71,13 @@ func NewOrchestrator(appCtx app_context.AppContext) *Orchestrator {
 				StepName: CreateOrder,
 				Action: func(ctx context.Context, event *entities_orders.OrderEvent) *common.AppError {
 					createJob := asyncjob.NewGroup(false, asyncjob.NewJob(func(ctx context.Context) *common.AppError {
+						event.ServiceStatus.ServiceStates = map[entities_orders.ServiceName]entities_orders.ServiceState{
+							entities_orders.OrderService:     {Status: entities_orders.ServiceInit},
+							entities_orders.CartService:      {Status: entities_orders.ServiceInit},
+							entities_orders.InventoryService: {Status: entities_orders.ServiceInit},
+						}
+						event.ServiceStatus.Status = entities_orders.ServicePending
+
 						if err := producer.SendCreateOrder(ctx, *event); err != nil {
 							event.RetryCount++
 							return err
@@ -88,14 +95,14 @@ func NewOrchestrator(appCtx app_context.AppContext) *Orchestrator {
 			{
 				StepName: UpdateOrder,
 				Action: func(ctx context.Context, event *entities_orders.OrderEvent) *common.AppError {
-					appCtx.GetConsumer().SagaStates[event.SagaID].ServiceStatus.Status = entities_orders.ServiceProcessing
+					// appCtx.GetConsumer().SagaStates[event.SagaID].ServiceStatus.Status = entities_orders.ServiceProcessing
 					// Initialize service states to Pending for all relevant services
 					event.ServiceStatus.ServiceStates = map[entities_orders.ServiceName]entities_orders.ServiceState{
 						entities_orders.OrderService:     {Status: entities_orders.ServicePending},
 						entities_orders.CartService:      {Status: entities_orders.ServicePending},
 						entities_orders.InventoryService: {Status: entities_orders.ServicePending},
 					}
-					appCtx.GetConsumer().SagaStates[event.SagaID].ServiceStatus.Status = entities_orders.ServiceFailed
+					// appCtx.GetConsumer().SagaStates[event.SagaID].ServiceStatus.Status = entities_orders.ServicePending
 
 					updateChannel, err := appCtx.GetConsumer().GetEventChannel(event.SagaID, consumerlocal.UpdateChannel)
 					if err != nil {
@@ -110,16 +117,17 @@ func NewOrchestrator(appCtx app_context.AppContext) *Orchestrator {
 						select {
 						case response := <-updateChannel:
 							// Merge received service states into the current event
-							for service, state := range response.ServiceStatus.ServiceStates {
-								if _, exists := event.ServiceStatus.ServiceStates[service]; exists {
-									event.ServiceStatus.ServiceStates[service] = state
-								}
-							}
+
+							event.UpdateService(response.CurrentService,
+								response.ServiceStatus.ServiceStates[response.CurrentService],
+								response.ServiceStatus.ServiceStates[response.CurrentService].Error)
 
 							if event.ServiceStatus.ServiceStates[event.CurrentService].Status == entities_orders.ServiceFailed {
 								return common.ErrInternalServerError(fmt.Errorf("one or more services failed during update"))
 							}
-
+							if response.CurrentService == entities_orders.OrderService {
+								event.Order.ID = response.Order.ID
+							}
 							// Check if all services have completed
 							allCompleted := true
 							for _, state := range event.ServiceStatus.ServiceStates {
@@ -538,7 +546,7 @@ func (o *Orchestrator) SubscribeToOrderUpdates(sagaID string, conn *websocket.Co
 				conn.WriteJSON(map[string]interface{}{
 					"status":  event.ServiceStatus.Status.String(),
 					"message": "place order completed",
-					"data":    event.Order,
+					"data":    event,
 				})
 				return
 			}

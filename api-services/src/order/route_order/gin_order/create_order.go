@@ -66,7 +66,6 @@ func ConvertPlaceOrderReqToOrder(placeOrderReq order_request.CreateOrderRequest)
 	return entities_orders.Order{
 		CustomerName:   placeOrderReq.CustomerName,
 		CustomerPhone:  placeOrderReq.CustomerPhone,
-		CartID:         placeOrderReq.CartID,
 		Shipping:       placeOrderReq.Shipping,
 		Notes:          placeOrderReq.Notes,
 		AddressID:      placeOrderReq.AddressID,
