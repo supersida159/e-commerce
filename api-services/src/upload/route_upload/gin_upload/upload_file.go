@@ -1,6 +1,7 @@
 package gin_upload
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -17,7 +18,15 @@ func UploadImg(appctx app_context.AppContext) gin.HandlerFunc {
 		// Get file from form data
 		fileHeader, err := c.FormFile("file")
 		if err != nil {
-			panic(common.ErrInvalidRequestParameter(err))
+			c.JSON(http.StatusBadRequest, common.ErrInvalidRequestParameter(err))
+			return
+		}
+
+		// Validate file size (e.g., limit to 10MB)
+		const maxFileSize = 10 << 20 // 10MB
+		if fileHeader.Size > maxFileSize {
+			c.JSON(http.StatusRequestEntityTooLarge, common.ErrFailedToSavePhoto(errors.New("file size too large")))
+			return
 		}
 
 		// Get folder name from form data (default is "img")
@@ -26,14 +35,16 @@ func UploadImg(appctx app_context.AppContext) gin.HandlerFunc {
 		// Open the uploaded file
 		file, err := fileHeader.Open()
 		if err != nil {
-			panic(common.ErrFailedToSavePhoto(err))
+			c.JSON(http.StatusInternalServerError, common.ErrFailedToSavePhoto(err))
+			return
 		}
 		defer file.Close()
 
 		// Read file content into a byte slice
 		dataBytes := make([]byte, fileHeader.Size)
 		if _, err := file.Read(dataBytes); err != nil {
-			panic(common.ErrFailedToSavePhoto(err))
+			c.JSON(http.StatusInternalServerError, common.ErrFailedToSavePhoto(err))
+			return
 		}
 
 		// Initialize repository and business logic
@@ -46,10 +57,11 @@ func UploadImg(appctx app_context.AppContext) gin.HandlerFunc {
 			// Handle specific errors from the business logic
 			switch e := err.(type) {
 			case *common.AppError:
-				panic(e) // Re-throw AppError if it's already an AppError
+				c.JSON(e.StatusCode, e)
 			default:
-				panic(common.ErrInternalServerError(err)) // Default to internal server error
+				c.JSON(http.StatusInternalServerError, common.ErrInternalServerError(err))
 			}
+			return
 		}
 
 		// Return success response

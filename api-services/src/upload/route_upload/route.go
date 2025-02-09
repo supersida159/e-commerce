@@ -9,7 +9,7 @@ import (
 
 func Routes(r *gin.RouterGroup, appCtx app_context.AppContext) {
 
-	authRoute := r.Group("upload", middleware.RequireAuth(appCtx))
+	authRoute := r.Group("/Private", middleware.RequireAuth(appCtx))
 	{
 		authRoute.POST("/addImage", gin_upload.UploadImg(appCtx))
 		// authRoute.PUT("/update", gin_user.UpdateUser(appCtx))

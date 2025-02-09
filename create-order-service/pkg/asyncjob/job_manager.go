@@ -2,8 +2,10 @@ package asyncjob
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"sync"
+
+	"github.com/supersida159/e-commerce/create-order/common"
 )
 
 type group struct {
@@ -20,10 +22,10 @@ func NewGroup(isConcurrent bool, jobs ...Job) *group {
 	}
 }
 
-func (g *group) Run(ctx context.Context) error {
+func (g *group) Run(ctx context.Context) *common.AppError {
 	g.wg.Add(len(g.jobs))
 
-	errChan := make(chan error, len(g.jobs))
+	errChan := make(chan *common.AppError, len(g.jobs))
 
 	for i, _ := range g.jobs {
 		if g.isConcurrent {
@@ -42,7 +44,7 @@ func (g *group) Run(ctx context.Context) error {
 			break
 		}
 	}
-	var err error
+	var err *common.AppError
 
 	for i := 0; i < len(g.jobs); i++ {
 		if v := <-errChan; v != nil {
@@ -55,10 +57,10 @@ func (g *group) Run(ctx context.Context) error {
 	return err
 }
 
-func (g *group) runJob(ctx context.Context, j Job) error {
+func (g *group) runJob(ctx context.Context, j Job) *common.AppError {
 	if err := j.Excute(ctx); err != nil {
 		for {
-			log.Println(err)
+			fmt.Println("err at run job:", err.RootErr)
 			if j.State() == StateRetryFailed {
 				return err
 			}

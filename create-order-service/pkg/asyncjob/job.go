@@ -98,7 +98,16 @@ type job struct {
 	stopChan   chan bool
 }
 
-func NewJob(handler JobHandler, retry int) *job {
+func NewJob(handler JobHandler, retries ...int) *job {
+	var retry int
+	if len(retries) > 1 {
+		retry = retries[0]
+	} else {
+		retry = 0
+	}
+	if retry <= 0 {
+		retry = defaultMaxRetryCount
+	}
 	j := job{
 		config: JobConfig{
 			MaxTimeOut: defaultMaxTimeOut,

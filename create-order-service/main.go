@@ -71,10 +71,10 @@ func main() {
 
 	// Register handlers
 	sub.RegisterHandler(consumerlocal.CreateOrderChannel, func(ctx context.Context, data *entities.OrderEvent) *common.AppError {
-		result := orderUseCase.CreateOrder(ctx, &data.Order)
+		orderId, result := orderUseCase.CreateOrder(ctx, &data.Order)
 		data.CurrentService = entities.OrderService
-
 		if result != nil {
+
 			data.ServiceStatus.LastUpdated = time.Now()
 			data.ServiceStatus.ServiceStates[entities.OrderService] = entities.ServiceState{
 				Status:    entities.ServiceFailed,
@@ -82,6 +82,7 @@ func main() {
 				Error:     result.RootErr.Error(),
 			}
 		} else {
+			data.Order.ID = *orderId
 			data.ServiceStatus.LastUpdated = time.Now()
 			data.ServiceStatus.ServiceStates[entities.OrderService] = entities.ServiceState{
 				Status:    entities.ServiceSuccess,
@@ -90,13 +91,11 @@ func main() {
 			}
 		}
 		err := sub.GetAppContext().GetProducer().SendStatusUpdate(*data)
-
 		if err != nil {
 			log.Fatal("Failed to send status update:", err)
 		}
 		return nil
-	},
-	)
+	})
 
 	sub.RegisterHandler(consumerlocal.RollbackChannel, func(ctx context.Context, data *entities.OrderEvent) *common.AppError {
 
@@ -109,6 +108,13 @@ func main() {
 				Status:    entities.ServiceRollbackFailed,
 				UpdatedAt: time.Now(),
 				Error:     result.RootErr.Error(),
+			}
+		} else {
+			data.ServiceStatus.LastUpdated = time.Now()
+			data.ServiceStatus.ServiceStates[entities.OrderService] = entities.ServiceState{
+				Status:    entities.ServiceRollbackSuccess,
+				UpdatedAt: time.Now(),
+				Error:     "",
 			}
 		}
 
