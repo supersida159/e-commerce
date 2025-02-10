@@ -9,6 +9,7 @@ import (
 	"github.com/supersida159/e-commerce/api-services/pkg/config"
 	"github.com/supersida159/e-commerce/api-services/pkg/kafka/saga"
 	"github.com/supersida159/e-commerce/api-services/pkg/skio"
+	route_auth "github.com/supersida159/e-commerce/api-services/src/OAUTH2.0/route"
 	"github.com/supersida159/e-commerce/api-services/src/cart/route_cart"
 	"github.com/supersida159/e-commerce/api-services/src/order/route_order"
 	route_product "github.com/supersida159/e-commerce/api-services/src/product/route_product"
@@ -63,13 +64,16 @@ func (s *Server) MapRoutes() error {
 
 	s.engine.StaticFile("/demo/", "./demo.html")
 	v1 := s.engine.Group("/api/v1")
-	
+
 	route_user.Routes(v1.Group("/user"), s.appCtx)
 	// route_upload.Routes(v1.Group("/upload"), s.appCtx)
 	route_product.Routes(v1.Group("/product"), s.appCtx)
 	route_order.Routes(v1.Group("/order"), s.appCtx, s.saga)
 	route_cart.Routes(v1.Group("/cart"), s.appCtx)
 	route_upload.Routes(v1.Group("/upload"), s.appCtx)
+
+	route_auth.Routes(v1.Group("/auth"), s.appCtx)
+
 	v1.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"message": "pong",

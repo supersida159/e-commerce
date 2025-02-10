@@ -56,7 +56,7 @@ func (privider *s3Provider) SaveFileUploaded(ctx context.Context, data []byte, d
 
 		Bucket:      aws.String(privider.bucketname),
 		Key:         aws.String(dst),
-		ACL:         aws.String("public-read"),
+		ACL:         aws.String("private"),
 		Body:        fileBytes,
 		ContentType: aws.String(fileType),
 	})

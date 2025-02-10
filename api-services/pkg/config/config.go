@@ -54,6 +54,10 @@ type Schema struct {
 		EndPoint        string `env:"AWS_ENDPOINT"`
 		Bucket          string `env:"AWS_BUCKET_NAME"`
 	}
+	OAuth struct {
+		ClientID     string `env:"OAUTH_CLIENT_ID"`
+		ClientSecret string `env:"OAUTH_CLIENT_SECRET"`
+	}
 }
 
 var cfg Schema

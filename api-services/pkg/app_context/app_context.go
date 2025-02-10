@@ -10,6 +10,7 @@ import (
 	"github.com/supersida159/e-commerce/api-services/pkg/localredis"
 	"github.com/supersida159/e-commerce/api-services/pkg/pubsub"
 	"github.com/supersida159/e-commerce/api-services/pkg/uploadprovider"
+	"golang.org/x/oauth2"
 	"gorm.io/gorm"
 )
 
@@ -24,6 +25,7 @@ type AppContext interface {
 	GetValidatetor() *common.Validator
 	GetProducer() *producers.OrderProducer
 	GetConsumer() *consumerlocal.SagaConsumer
+	GetOAuth() *oauth2.Config
 }
 
 type AppCtx struct {
@@ -36,9 +38,10 @@ type AppCtx struct {
 	Validator   *common.Validator
 	Producer    *producers.OrderProducer
 	Consumer    *consumerlocal.SagaConsumer
+	OAuthConfig *oauth2.Config
 }
 
-func NewAppContext(dbs *dbs.Database, pb pubsub.PubSub, cache *localredis.RedisWRealStore, producer *producers.OrderProducer, consumer *consumerlocal.SagaConsumer) *AppCtx {
+func NewAppContext(dbs *dbs.Database, pb pubsub.PubSub, cache *localredis.RedisWRealStore, producer *producers.OrderProducer, consumer *consumerlocal.SagaConsumer, OAuthConfig *oauth2.Config) *AppCtx {
 	return &AppCtx{
 		Dbs: dbs,
 		UpProvider: uploadprovider.NewS3Provider(config.GetConfig().AWSS3.Bucket,
@@ -46,12 +49,13 @@ func NewAppContext(dbs *dbs.Database, pb pubsub.PubSub, cache *localredis.RedisW
 			config.GetConfig().AWSS3.AccessKeyID,
 			config.GetConfig().AWSS3.SecretAccessKey,
 			config.GetConfig().AWSS3.EndPoint),
-		Pb:        pb,
-		Cfg:       config.GetConfig(),
-		Cache:     cache,
-		Validator: common.NewValidator(),
-		Producer:  producer,
-		Consumer:  consumer,
+		Pb:          pb,
+		Cfg:         config.GetConfig(),
+		Cache:       cache,
+		Validator:   common.NewValidator(),
+		Producer:    producer,
+		Consumer:    consumer,
+		OAuthConfig: OAuthConfig,
 	}
 }
 
@@ -93,4 +97,8 @@ func (ctx *AppCtx) GetRedisClient() *redis.Client {
 
 func (ctx *AppCtx) GetConsumer() *consumerlocal.SagaConsumer {
 	return ctx.Consumer
+}
+
+func (ctx *AppCtx) GetOAuth() *oauth2.Config {
+	return ctx.OAuthConfig
 }
