@@ -19,7 +19,7 @@ import (
 )
 
 type CreateImageStore interface {
-	// AddImage(ctx context.Context, data *common.Image) error
+	AddImage(ctx context.Context, data *common.Image) error
 }
 
 type uploadBiz struct {
@@ -60,10 +60,10 @@ func (biz *uploadBiz) Upload(ctx context.Context, data []byte, folder, fileName 
 		return nil, common.ErrFailedToSavePhoto(err)
 	}
 
-	// err = biz.imgStore.AddImage(ctx, img)
-	// if err != nil {
-	// 	return nil, entities_Upload.ErrCannotSaveImgOnDB(err)
-	// }
+	err = biz.imgStore.AddImage(ctx, img)
+	if err != nil {
+		return nil, common.ErrFailedToSavePhoto(err)
+	}
 
 	return img, nil
 

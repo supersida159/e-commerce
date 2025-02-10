@@ -1,3 +1,4 @@
+// config/config.go
 package config
 
 import (
@@ -31,13 +32,13 @@ type Schema struct {
 	RedisURI      string `env:"REDIS_URI"`
 	RedisPassword string `env:"REDIS_PASSWORD"`
 	RedisDB       int    `env:"REDIS_DB"`
-	SecretKey     string `env:"SECRET_KEY"`
-	S3BucketName  string `env:"S3_BUCKET_NAME"`
-	S3Region      string `env:"S3_REGION"`
-	S3APIKey      string `env:"S3_API_KEY"`
-	S3SecretKey   string `env:"S3_SECRET_KEY"`
-	S3Domain      string `env:"S3_DOMAIN"`
-	Kafka         struct {
+	// SecretKey     string `env:"SECRET_KEY"`
+	// S3BucketName  string `env:"S3_BUCKET_NAME"`
+	// S3Region      string `env:"S3_REGION"`
+	// S3APIKey      string `env:"S3_API_KEY"`
+	// S3SecretKey   string `env:"S3_SECRET_KEY"`
+	// S3Domain      string `env:"S3_DOMAIN"`
+	Kafka struct {
 		Broker               []string `env:"KAFKA_BROKERS"`
 		Retry                int      `env:"KAFKA_RETRY"`
 		ConsumerOffsetReset  string   `env:"KAFKA_CONSUMER_OFFSET_RESET"`
@@ -46,11 +47,20 @@ type Schema struct {
 		KafkaVersion         string   `env:"KAFKA_VERSION"`
 		Timeout              int      `env:"KAFKA_TIMEOUT"`
 	}
+	AWSS3 struct {
+		AccessKeyID     string `env:"AWS_ACCESS_KEY_ID"`
+		SecretAccessKey string `env:"AWS_SECRET_ACCESS_KEY"`
+		Region          string `env:"AWS_REGION"`
+		EndPoint        string `env:"AWS_ENDPOINT"`
+		Bucket          string `env:"AWS_BUCKET_NAME"`
+	}
+	OAuth struct {
+		ClientID     string `env:"OAUTH_CLIENT_ID"`
+		ClientSecret string `env:"OAUTH_CLIENT_SECRET"`
+	}
 }
 
-var (
-	cfg Schema
-)
+var cfg Schema
 
 func LoadConfig() *Schema {
 	_, filename, _, _ := runtime.Caller(0)

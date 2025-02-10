@@ -8,7 +8,7 @@ import (
 )
 
 type OrderStore interface {
-	CreateOrder(ctx context.Context, data *entities.Order) *common.AppError
+	CreateOrder(ctx context.Context, data *entities.Order) (*int, *common.AppError)
 	SoftDeleteOrder(ctx context.Context, id int) *common.AppError
 }
 
@@ -20,7 +20,7 @@ func NewOrderUsecase(store OrderStore) *OrderUsecase {
 	return &OrderUsecase{store: store}
 }
 
-func (uc *OrderUsecase) CreateOrder(ctx context.Context, data *entities.Order) *common.AppError {
+func (uc *OrderUsecase) CreateOrder(ctx context.Context, data *entities.Order) (*int, *common.AppError) {
 	return uc.store.CreateOrder(ctx, data)
 }
 

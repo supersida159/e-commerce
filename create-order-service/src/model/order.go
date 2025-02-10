@@ -16,9 +16,8 @@ type Order struct {
 	UserOrderID     int              `gorm:"column:user_order_id" json:"-"`
 
 	// User-facing fields
-	CustomerName  string       `gorm:"column:customer_name" json:"customer_name"`               // Name of the customer
-	CustomerPhone string       `gorm:"column:customer_phone" json:"customer_phone"`             // Phone number of the customer
-	Products      []*CartItem  `gorm:"column:products;type:json;references:ID" json:"products"` // Slice of ProductQuantity structs representing the products in the order (removed unnecessary `json` tag)
+	CustomerName  string       `gorm:"column:customer_name" json:"customer_name"`   // Name of the customer
+	CustomerPhone string       `gorm:"column:customer_phone" json:"customer_phone"` // Phone number of the customer
 	Cart          *Cart        `gorm:"foreignKey:CartID" json:"cart"`
 	CartID        int          `gorm:"column:cart_id" json:"cart_id"`        // ID of the cart associated with the order
 	Shipping      ShippingInfo `gorm:"embedded" json:"shipping"`             // Embedded ShippingInfo struct representing shipping details
