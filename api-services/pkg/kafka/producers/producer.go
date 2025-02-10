@@ -110,7 +110,7 @@ func (p *OrderProducer) SendToMultipleTopics(ctx context.Context, event entities
 		})
 	}
 
-	if err := g.Wait().(*common.AppError); err.RootErr != nil {
+	if err := g.Wait().(*common.AppError); err != nil {
 		return common.ErrInternalServerError(fmt.Errorf("multi-topic send failed: %w", err))
 	}
 	return nil

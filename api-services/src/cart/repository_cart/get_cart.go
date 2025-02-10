@@ -13,9 +13,10 @@ func (s *sqlStore) GetCart(ctx context.Context, userID int, moreInfor ...string)
 	var cart entities_carts.Cart
 
 	// Preload both CartItem and CartItem.Product
-	if err := db.Preload("User").Preload("Items.Product").
+	if err := db.Preload("Items.Product").
 		Where("UserID = ?", userID).
 		Where("status = ?", 1).
+		Where("deleted_at IS NULL").
 		Order("id DESC").
 		First(&cart).Error; err != nil {
 		fmt.Println("Error fetching cart:", err)

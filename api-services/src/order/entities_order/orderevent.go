@@ -184,16 +184,14 @@ func (e *OrderEvent) UpdateStatus(status ServiceStatusNumber, errMsg string) err
 	return nil
 }
 
-func (e *OrderEvent) UpdateServiceStatus(service ServiceName, status ServiceStatusNumber, errMsg string) error {
-	state, exists := e.ServiceStatus.ServiceStates[service]
+func (e *OrderEvent) UpdateService(servicename ServiceName, servicesState ServiceState, errMsg string) error {
+	state, exists := e.ServiceStatus.ServiceStates[servicename]
 	if !exists {
-		return fmt.Errorf("invalid service name: %s", service)
+		return fmt.Errorf("invalid service name: %s", servicename)
 	}
 
-	state.Status = status
-	state.UpdatedAt = time.Now()
-	state.Error = errMsg
-	e.ServiceStatus.ServiceStates[service] = state
+	state = servicesState
+	e.ServiceStatus.ServiceStates[servicename] = state
 	e.ServiceStatus.LastUpdated = time.Now()
 	e.UpdatedAt = time.Now()
 	e.Version++

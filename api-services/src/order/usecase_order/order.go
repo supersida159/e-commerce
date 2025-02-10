@@ -32,7 +32,7 @@ type OrderStore interface {
 	CreateOrder(ctx context.Context, order *entities_orders.Order) *common.AppError
 }
 type CartStore interface {
-	GetCart(ctx context.Context, cartID int, moreInfor ...string) (*entities_carts.Cart, *common.AppError)
+	GetCart(ctx context.Context, UserId int, moreInfor ...string) (*entities_carts.Cart, *common.AppError)
 }
 type orderBiz struct {
 	orderStore OrderStore
@@ -62,7 +62,7 @@ func (b *orderBiz) CreateOrder(ctx context.Context, order *entities_orders.Order
 		return nil, common.ErrInternalServerError(err)
 	}
 	order.Cart = cart
-	order.Products = cart.Items
+	order.CartID = cart.ID
 
 	if err := b.validateOrder(order); err != nil {
 		return nil, common.ErrInvalidInputData(err)
@@ -77,59 +77,6 @@ func (b *orderBiz) CreateOrder(ctx context.Context, order *entities_orders.Order
 	}
 	return &orderEvent.SagaID, nil
 }
-
-// // HandleOrderStatusUpdate processes status updates for an order
-// func (b *orderBiz) HandleOrderStatusUpdate(ctx context.Context, event *entities_orders.OrderEvent) *common.AppError {
-// 	if event == nil {
-// 		return common.ErrInvalidRequestParameter(fmt.Errorf("event cannot be nil"))
-// 	}
-
-// 	ctx, cancel := context.WithTimeout(ctx, b.timeout)
-// 	defer cancel()
-
-// 	// Update order status based on saga status
-// 	switch event.ServiceStatus.Status {
-// 	case entities_orders.ServiceSuccess:
-// 		event.Order.Status = int(OrderStatusCompleted)
-// 	case entities_orders.ServiceFailed:
-// 		event.Order.Status = int(OrderStatusFailed)
-// 	case entities_orders.ServiceCancelled:
-// 		event.Order.Status = int(OrderStatusCancelled)
-// 	default:
-// 		event.Order.Status = int(OrderStatusProcessing)
-// 	}
-
-// 	// Handle the status update through the orchestrator
-// 	if err := b.orchestrator.HandleServiceResponse(ctx, *event); err != nil {
-// 		return common.ErrInternalServerError(fmt.Errorf("failed to handle status update: %w", err))
-// 	}
-
-// 	return nil
-// }
-
-// // HandleOrderCompensation processes compensation events for failed orders
-// func (b *orderBiz) HandleOrderCompensation(ctx context.Context, event *entities_orders.OrderEvent) *common.AppError {
-// 	if event == nil {
-// 		return common.ErrInvalidRequestParameter(fmt.Errorf("event cannot be nil"))
-// 	}
-
-// 	ctx, cancel := context.WithTimeout(ctx, b.timeout)
-// 	defer cancel()
-
-// 	// Mark the order as cancelled during compensation
-// 	event.Order.Status = int(OrderStatusCancelled)
-// 	now := time.Now()
-// 	event.Order.UpdatedAt = &now
-
-// 	// Process the compensation through the orchestrator
-// 	if err := b.orchestrator.HandleCompensation(ctx, *event); err != nil {
-// 		return common.ErrInternalServerError(fmt.Errorf("failed to handle compensation: %w", err))
-// 	}
-
-// 	return nil
-// }
-
-// Helper methods
 
 func (b *orderBiz) validateOrder(order *entities_orders.Order) error {
 	if order == nil {
