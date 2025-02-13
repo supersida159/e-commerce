@@ -76,7 +76,7 @@ type UserCreate struct {
 	Phone           string     `json:"phone" gorm:"column:phone;"`
 	Address         []*Address `json:"address,omitempty" gorm:"foreignKey:UserID;references:ID"` // Using jsonb field
 
-	Avatar *common.Images `json:"avatar,omitempty" gorm:"column:avatar;type:json"`
+	Avatar *common.Image `json:"avatar,omitempty" gorm:"column:avatar;type:json"`
 }
 
 func (UserCreate) TableName() string {

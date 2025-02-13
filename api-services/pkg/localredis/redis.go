@@ -11,6 +11,7 @@ import (
 	goredis "github.com/redis/go-redis/v9" // Updated import path
 
 	"github.com/sirupsen/logrus"
+	"github.com/supersida159/e-commerce/api-services/common"
 	"github.com/supersida159/e-commerce/api-services/src/users/entities_user"
 )
 
@@ -51,7 +52,7 @@ type Client interface {
 	RunExpireOrder(ctx context.Context)
 }
 type RealStore interface {
-	FindUser(ctx context.Context, condition map[string]interface{}, moreInfores ...string) (*entities_user.User, error)
+	FindUser(ctx context.Context, condition map[string]interface{}, moreInfores ...string) (*entities_user.User, *common.AppError)
 }
 
 // NewRedis Redis interface with config
@@ -79,16 +80,16 @@ func NewRedis(config Config, realStore RealStore) *RedisWRealStore {
 func (r *RedisWRealStore) GetClient() *goredis.Client {
 	return r.Client
 }
-func (r *RedisWRealStore) FindUser(ctx context.Context, condition map[string]interface{}, moreInfores ...string) (*entities_user.User, error) {
+func (r *RedisWRealStore) FindUser(ctx context.Context, condition map[string]interface{}, moreInfores ...string) (*entities_user.User, *common.AppError) {
 	userID := condition["id"].(int)
 	var userInCache entities_user.User
 	err := r.Get(fmt.Sprintf("user-%d", userID), &userInCache)
 	if err != nil {
 		return &userInCache, nil
 	}
-	userInRealStore, err := r.RealStore.FindUser(ctx, condition, moreInfores...)
-	if err != nil {
-		return nil, err
+	userInRealStore, appErr := r.RealStore.FindUser(ctx, condition, moreInfores...)
+	if appErr != nil {
+		return nil, appErr
 	}
 	go func() {
 		r.Set(fmt.Sprintf("user-%d", userID), userInRealStore)

@@ -26,6 +26,8 @@ import (
 	httpServer "github.com/supersida159/e-commerce/api-services/src/server"
 	"github.com/supersida159/e-commerce/api-services/src/users/entities_user"
 	"github.com/supersida159/e-commerce/api-services/src/users/repository_user"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
 )
 
 func main() {
@@ -77,9 +79,16 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create consumer: %v", err)
 	}
-	// C
 
-	appctx := app_context.NewAppContext(db, localpubsub, cache, producer, consumer)
+	conf := &oauth2.Config{
+		ClientID:     cfg.OAuth.ClientID,
+		ClientSecret: cfg.OAuth.ClientSecret,
+		RedirectURL:  "http://localhost:8090/api/v1/auth/callback",
+		Scopes:       []string{"email", "profile"},
+		Endpoint:     google.Endpoint,
+	}
+
+	appctx := app_context.NewAppContext(db, localpubsub, cache, producer, consumer, conf)
 
 	err = goroutineinmain.RunExpireOrder(appctx)
 	if err != nil {

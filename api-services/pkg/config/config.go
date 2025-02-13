@@ -1,14 +1,14 @@
-// config/config.go
 package config
 
 import (
 	"log"
+	"os"
 	"path/filepath"
 	"runtime"
 	"time"
 
 	"github.com/caarlos0/env/v6"
-	"github.com/joho/godotenv"
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -24,39 +24,34 @@ var AuthIgnoreMethods = []string{
 }
 
 type Schema struct {
-	Environment   string `env:"ENVIRONMENT"`
-	HttpPort      int    `env:"HTTP_PORT"`
-	GrpcPort      int    `env:"GRPC_PORT"`
-	AuthSecret    string `env:"AUTH_SECRET"`
-	DatabaseURI   string `env:"DATABASE_URI"`
-	RedisURI      string `env:"REDIS_URI"`
-	RedisPassword string `env:"REDIS_PASSWORD"`
-	RedisDB       int    `env:"REDIS_DB"`
-	// SecretKey     string `env:"SECRET_KEY"`
-	// S3BucketName  string `env:"S3_BUCKET_NAME"`
-	// S3Region      string `env:"S3_REGION"`
-	// S3APIKey      string `env:"S3_API_KEY"`
-	// S3SecretKey   string `env:"S3_SECRET_KEY"`
-	// S3Domain      string `env:"S3_DOMAIN"`
-	Kafka struct {
-		Broker               []string `env:"KAFKA_BROKERS"`
-		Retry                int      `env:"KAFKA_RETRY"`
-		ConsumerOffsetReset  string   `env:"KAFKA_CONSUMER_OFFSET_RESET"`
-		ProducerRequiredAcks int      `env:"KAFKA_PRODUCER_REQUIRED_ACKS"`
-		EnableTLS            bool     `env:"KAFKA_ENABLE_TLS"`
-		KafkaVersion         string   `env:"KAFKA_VERSION"`
-		Timeout              int      `env:"KAFKA_TIMEOUT"`
+	Environment   string `yaml:"ENVIRONMENT"`
+	HttpPort      int    `yaml:"HTTP_PORT"`
+	GrpcPort      int    `yaml:"GRPC_PORT"`
+	AuthSecret    string `yaml:"AUTH_SECRET"`
+	DatabaseURI   string `yaml:"DATABASE_URI"`
+	RedisURI      string `yaml:"REDIS_URI"`
+	RedisPassword string `yaml:"REDIS_PASSWORD"`
+	RedisDB       int    `yaml:"REDIS_DB"`
+	ExpireTime    int    `yaml:"EXPIRY_TIME"`
+	Kafka         struct {
+		Broker               []string `yaml:"KAFKA_BROKERS"`
+		Retry                int      `yaml:"KAFKA_RETRY"`
+		ConsumerOffsetReset  string   `yaml:"KAFKA_CONSUMER_OFFSET_RESET"`
+		ProducerRequiredAcks int      `yaml:"KAFKA_PRODUCER_REQUIRED_ACKS"`
+		EnableTLS            bool     `yaml:"KAFKA_ENABLE_TLS"`
+		KafkaVersion         string   `yaml:"KAFKA_VERSION"`
+		Timeout              int      `yaml:"KAFKA_TIMEOUT"`
 	}
 	AWSS3 struct {
-		AccessKeyID     string `env:"AWS_ACCESS_KEY_ID"`
-		SecretAccessKey string `env:"AWS_SECRET_ACCESS_KEY"`
-		Region          string `env:"AWS_REGION"`
-		EndPoint        string `env:"AWS_ENDPOINT"`
-		Bucket          string `env:"AWS_BUCKET_NAME"`
+		AccessKeyID     string `yaml:"AWS_ACCESS_KEY_ID"`
+		SecretAccessKey string `yaml:"AWS_SECRET_ACCESS_KEY"`
+		Region          string `yaml:"AWS_REGION"`
+		EndPoint        string `yaml:"AWS_ENDPOINT"`
+		Bucket          string `yaml:"AWS_BUCKET_NAME"`
 	}
 	OAuth struct {
-		ClientID     string `env:"OAUTH_CLIENT_ID"`
-		ClientSecret string `env:"OAUTH_CLIENT_SECRET"`
+		ClientID     string `yaml:"OAUTH_CLIENT_ID"`
+		ClientSecret string `yaml:"OAUTH_CLIENT_SECRET"`
 	}
 }
 
@@ -66,16 +61,27 @@ func LoadConfig() *Schema {
 	_, filename, _, _ := runtime.Caller(0)
 	currentDir := filepath.Dir(filename)
 
-	err := godotenv.Load(filepath.Join(currentDir, "config.sample.yaml"))
+	// Load YAML config file
+	filePath := filepath.Join(currentDir, "config.sample.yaml")
+	file, err := os.Open(filePath)
 	if err != nil {
-		log.Printf("Error on load configuration file, error: %v", err)
+		log.Fatalf("Error opening config file: %v", err)
+	}
+	defer file.Close()
+
+	// Decode YAML into the Schema struct
+	decoder := yaml.NewDecoder(file)
+	err = decoder.Decode(&cfg)
+	if err != nil {
+		log.Fatalf("Error decoding YAML config file: %v", err)
 	}
 
+	// Parse environment variables (optional, if you want them to override YAML values)
 	if err := env.Parse(&cfg); err != nil {
-		log.Fatalf("Error on parsing configuration file, error: %v", err)
+		log.Fatalf("Error parsing environment variables: %v", err)
 	}
 	if err := env.Parse(&cfg.Kafka); err != nil {
-		log.Fatalf("Error on parsing configuration file, error: %v", err)
+		log.Fatalf("Error parsing Kafka environment variables: %v", err)
 	}
 
 	return &cfg
