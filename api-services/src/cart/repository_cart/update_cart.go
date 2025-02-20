@@ -60,7 +60,11 @@ func NewCartStore(db *gorm.DB) *CartStore {
 // UpdateCartItems is the additional function specific to CartStore
 func (s *CartStore) UpdateCartItems(ctx context.Context, data *entities_product.CartItem, userID int) *common.AppError {
 	var cart entities_carts.Cart
-	err := s.Db.Table(entities_carts.Cart{}.TableName()).Where("UserID = ?", userID).Where("status=?", 1).Preload("Items").First(&cart).Error
+	err := s.Db.Table(entities_carts.Cart{}.TableName()).
+		Where("UserID = ?", userID).
+		Where("status=?", 1).
+		Where("deleted_at IS NULL").
+		Preload("Items").First(&cart).Error
 	if err == gorm.ErrRecordNotFound {
 		//create cart
 		err = s.Db.Table(entities_carts.EntityName).Create(&entities_carts.Cart{UserID: userID, Items: []*entities_product.CartItem{data}}).Error
@@ -88,7 +92,10 @@ func (s *CartStore) UpdateCartItems(ctx context.Context, data *entities_product.
 
 		}
 		data.CartID = cart.ID
-		s.Db.Table(entities_product.CartItem{}.TableName()).Create(&data)
+		err := s.Db.Table(entities_product.CartItem{}.TableName()).Create(&data).Error
+		if err != nil {
+			return common.ErrDB(err)
+		}
 
 	}
 

@@ -82,7 +82,7 @@ func NewOrchestrator(appCtx app_context.AppContext) *Orchestrator {
 							event.RetryCount++
 							return err
 						}
-						appCtx.GetConsumer().CreateNewUpdateChannel(event.SagaID)
+
 						return nil
 					}))
 

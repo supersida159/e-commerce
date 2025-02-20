@@ -27,7 +27,7 @@ func Login(appCtx app_context.AppContext) gin.HandlerFunc {
 		store := repository_user.NewSQLStore(db)
 		md5 := hasher.NewMd5()
 
-		business := usecase_user.NewLoginBusiness(appCtx, store, tokenProvider, md5, 60*60*24*30)
+		business := usecase_user.NewLoginBusiness(appCtx, store, tokenProvider, md5)
 		acount, err := business.Login(c.Request.Context(), &LoginUserData)
 
 		if err != nil {

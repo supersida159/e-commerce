@@ -63,6 +63,9 @@ func (s Server) GetEngine() *gin.Engine {
 func (s *Server) MapRoutes() error {
 
 	s.engine.StaticFile("/demo/", "./demo.html")
+
+	// s.engine.GET("/auth/callback", gin_auth.OAuthCallbackHandler(s.appCtx))
+
 	v1 := s.engine.Group("/api/v1")
 
 	route_user.Routes(v1.Group("/user"), s.appCtx)

@@ -11,7 +11,7 @@ import (
 )
 
 type LoginStorage interface {
-	FindUser(ctx context.Context, conditions map[string]interface{}, moreInfo ...string) (*entities_user.User, error)
+	FindUser(ctx context.Context, conditions map[string]interface{}, moreInfo ...string) (*entities_user.User, *common.AppError)
 }
 
 type TokenCfg interface {
@@ -30,13 +30,13 @@ type LoginBusiness struct {
 	expiry        int
 }
 
-func NewLoginBusiness(appCtx app_context.AppContext, storeUser LoginStorage, tokenProvider tokenprovider.Provider, hasher Hasher, expiry int) *LoginBusiness {
+func NewLoginBusiness(appCtx app_context.AppContext, storeUser LoginStorage, tokenProvider tokenprovider.Provider, hasher Hasher) *LoginBusiness {
 	return &LoginBusiness{
 		appCtx:        appCtx,
 		storeUser:     storeUser,
 		tokenProvider: tokenProvider,
 		hasher:        hasher,
-		expiry:        expiry,
+		expiry:        appCtx.GetConfig().ExpireTime,
 	}
 }
 
@@ -59,11 +59,28 @@ func (b *LoginBusiness) Login(ctx context.Context, data *entities_user.UserLogin
 		Role:   user.Role,
 	}
 
+	accessToken, TokenErr := b.tokenProvider.Generate(payload, b.expiry)
+	if TokenErr != nil {
+		return nil, common.ErrInternalServerError(err)
+	}
+	refreshToken, TokenErr := b.tokenProvider.Generate(payload, b.expiry*7)
+	if TokenErr != nil {
+		return nil, common.ErrInternalServerError(err)
+	}
+	account := entities_user.NewAccount(accessToken, refreshToken)
+	return account, nil
+}
+
+func (b *LoginBusiness) FindUser(ctx context.Context, conditions map[string]interface{}, moreInfo ...string) (*entities_user.User, *common.AppError) {
+	return b.storeUser.FindUser(ctx, conditions, moreInfo...)
+}
+
+func (b *LoginBusiness) GenerateToken(payload *tokenprovider.TokenPayload) (*entities_user.Account, *common.AppError) {
 	accessToken, err := b.tokenProvider.Generate(payload, b.expiry)
 	if err != nil {
 		return nil, common.ErrInternalServerError(err)
 	}
-	refreshToken, err := b.tokenProvider.Generate(payload, b.expiry*2)
+	refreshToken, err := b.tokenProvider.Generate(payload, b.expiry*7)
 	if err != nil {
 		return nil, common.ErrInternalServerError(err)
 	}

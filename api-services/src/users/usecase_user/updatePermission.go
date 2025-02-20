@@ -9,8 +9,8 @@ import (
 )
 
 type UpdatePermissionStorage interface {
-	FindUser(ctx context.Context, conditions map[string]interface{}, moreInfo ...string) (*entities_user.User, error)
-	UpdateUser(ctx context.Context, data *entities_user.UserUpdate) error
+	FindUser(ctx context.Context, conditions map[string]interface{}, moreInfo ...string) (*entities_user.User, *common.AppError)
+	UpdateUser(ctx context.Context, data *entities_user.UserUpdate) *common.AppError
 }
 
 type updatePermissionBusiness struct {
@@ -27,7 +27,7 @@ func NewUpdatePermissionBusiness(appCtx app_context.AppContext, storeUser Update
 	}
 }
 
-func (b *updatePermissionBusiness) UpdateUserPermission(ctx context.Context, data *entities_user.UserUpdate) error {
+func (b *updatePermissionBusiness) UpdateUserPermission(ctx context.Context, data *entities_user.UserUpdate) *common.AppError {
 	if err := b.storeUser.UpdateUser(ctx, data); err != nil {
 		return common.ErrDB(err)
 	}

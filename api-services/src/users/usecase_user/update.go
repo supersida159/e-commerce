@@ -9,8 +9,8 @@ import (
 )
 
 type UpdateStorage interface {
-	FindUser(ctx context.Context, conditions map[string]interface{}, moreInfo ...string) (*entities_user.User, error)
-	UpdateUser(ctx context.Context, data *entities_user.UserUpdate) error
+	FindUser(ctx context.Context, conditions map[string]interface{}, moreInfo ...string) (*entities_user.User, *common.AppError)
+	UpdateUser(ctx context.Context, data *entities_user.UserUpdate) *common.AppError
 }
 
 type UpdateBusiness struct {
@@ -27,7 +27,7 @@ func NewUpdateBusiness(appCtx app_context.AppContext, storeUser UpdateStorage, h
 	}
 }
 
-func (b *UpdateBusiness) UpdateUser(ctx context.Context, data *entities_user.UserUpdate) error {
+func (b *UpdateBusiness) UpdateUser(ctx context.Context, data *entities_user.UserUpdate) *common.AppError {
 	var oldData *entities_user.User
 
 	oldData, err := b.storeUser.FindUser(ctx, map[string]interface{}{"id": data.ID})

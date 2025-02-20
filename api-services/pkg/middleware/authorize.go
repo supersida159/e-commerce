@@ -42,10 +42,10 @@ func RequireAuth(appCtx app_context.AppContext) func(c *gin.Context) {
 		// db := appCtx.GetMainDBConnection()
 		// store := usersstore.NewSQLStore(db)
 
-		user, err := appCtx.GetCache().RealStore.FindUser(c.Request.Context(), map[string]interface{}{"id": payload.UserId})
+		user, appErr := appCtx.GetCache().RealStore.FindUser(c.Request.Context(), map[string]interface{}{"id": payload.UserId})
 
-		if err != nil {
-			c.AbortWithError(http.StatusUnauthorized, err)
+		if appErr != nil {
+			c.AbortWithError(http.StatusUnauthorized, appErr)
 		}
 
 		if user.Status == 0 {

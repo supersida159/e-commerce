@@ -187,6 +187,8 @@ func (controller *CartController) UpdateCart(c *gin.Context) {
 		return
 	}
 	userid := c.MustGet(common.CurrentUser).(common.Requester)
+	data.Product.Mask(false)
+	data.ProductID = data.Product.ID
 
 	if err := controller.CartService.UpdateCartItemsBiz(c.Request.Context(), &data, userid.GetUserID()); err != nil {
 		response.BuildErrorGinResponse(c, err)

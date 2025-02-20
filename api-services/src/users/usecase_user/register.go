@@ -9,8 +9,8 @@ import (
 )
 
 type RegisterStorage interface {
-	FindUser(ctx context.Context, conditions map[string]interface{}, moreInfo ...string) (*entities_user.User, error)
-	CreateUser(ctx context.Context, data *entities_user.UserCreate) error
+	FindUser(ctx context.Context, conditions map[string]interface{}, moreInfo ...string) (*entities_user.User, *common.AppError)
+	CreateUser(ctx context.Context, data *entities_user.UserCreate) *common.AppError
 }
 
 type RegisterBusiness struct {
@@ -44,4 +44,31 @@ func (b *RegisterBusiness) Register(ctx context.Context, data *entities_user.Use
 		return common.ErrDB(err)
 	}
 	return nil
+}
+func (b *RegisterBusiness) RegisterGoogle(ctx context.Context, data *entities_user.UserCreate) (*entities_user.User, *common.AppError) {
+	// Check if the user already exists
+	user, err := b.storeUser.FindUser(ctx, map[string]interface{}{"email": data.Email})
+	if user != nil {
+		return nil, common.ErrUserNameExists(err)
+	}
+
+	// Generate a salt for password hashing
+	salt := common.GenSalt(50)
+	data.Salt = salt
+	data.Role = "user"
+	data.Status = 1
+
+	// Create the new user in the database
+	if err := b.storeUser.CreateUser(ctx, data); err != nil {
+		return nil, common.ErrDB(err)
+	}
+
+	// Retrieve the newly created user from the database
+	var createdUser *entities_user.User
+	createdUser, err = b.storeUser.FindUser(ctx, map[string]interface{}{"email": data.Email})
+	if err != nil {
+		return nil, common.ErrDB(err)
+	}
+
+	return createdUser, nil
 }

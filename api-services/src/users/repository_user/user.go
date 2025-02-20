@@ -9,7 +9,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func (s *sqlStore) FindUser(ctx context.Context, conditions map[string]interface{}, moreInfo ...string) (*entities_user.User, error) {
+func (s *sqlStore) FindUser(ctx context.Context, conditions map[string]interface{}, moreInfo ...string) (*entities_user.User, *common.AppError) {
 	db := s.db.Begin()
 	db = db.Table(entities_user.User{}.TableName())
 
@@ -31,7 +31,7 @@ func (s *sqlStore) FindUser(ctx context.Context, conditions map[string]interface
 	}
 	return &user, nil
 }
-func (s *sqlStore) CreateUser(ctx context.Context, data *entities_user.UserCreate) error {
+func (s *sqlStore) CreateUser(ctx context.Context, data *entities_user.UserCreate) *common.AppError {
 
 	db := s.db.Begin()
 	if err := db.Table(data.TableName()).Create(&data).Error; err != nil {
@@ -46,7 +46,7 @@ func (s *sqlStore) CreateUser(ctx context.Context, data *entities_user.UserCreat
 	return nil
 }
 
-func (s *sqlStore) SoftDeleteUser(ctx context.Context, id int) error {
+func (s *sqlStore) SoftDeleteUser(ctx context.Context, id int) *common.AppError {
 	db := s.db
 
 	if err := db.Table(entities_user.User{}.TableName()).Where("id = ?", id).Updates(map[string]interface{}{"status": 0}).Error; err != nil {
@@ -56,7 +56,7 @@ func (s *sqlStore) SoftDeleteUser(ctx context.Context, id int) error {
 	return nil
 }
 
-func (s *sqlStore) UpdateUser(ctx context.Context, data *entities_user.UserUpdate) error {
+func (s *sqlStore) UpdateUser(ctx context.Context, data *entities_user.UserUpdate) *common.AppError {
 	db := s.db
 	if data.Address != nil {
 		fmt.Println(data.Address)
@@ -88,4 +88,9 @@ func (s *sqlStore) UpdateUser(ctx context.Context, data *entities_user.UserUpdat
 		return common.ErrDB(err)
 	}
 	return nil
+}
+
+// Add this method to your SQLStore
+func (s *sqlStore) UpdateUserAvatar(ctx context.Context, id int, data map[string]interface{}) error {
+	return s.db.Model(&entities_user.UserCreate{}).Where("id = ?", id).Updates(data).Error
 }
