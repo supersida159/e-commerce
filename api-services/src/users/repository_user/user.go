@@ -89,3 +89,8 @@ func (s *sqlStore) UpdateUser(ctx context.Context, data *entities_user.UserUpdat
 	}
 	return nil
 }
+
+// Add this method to your SQLStore
+func (s *sqlStore) UpdateUserAvatar(ctx context.Context, id int, data map[string]interface{}) error {
+	return s.db.Model(&entities_user.UserCreate{}).Where("id = ?", id).Updates(data).Error
+}

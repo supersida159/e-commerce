@@ -30,6 +30,7 @@ func NewCartBiz(store ExtendedStorage) *CartBiz {
 }
 
 func (s *CartBiz) UpdateCartItemsBiz(ctx context.Context, data *entities_product.CartItem, userID int) *common.AppError {
+
 	if err := s.store.UpdateCartItems(ctx, data, userID); err != nil {
 		return err
 	}

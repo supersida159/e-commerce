@@ -1,3 +1,4 @@
+// route_auth/routes.go
 package route_auth
 
 import (
@@ -8,14 +9,14 @@ import (
 )
 
 func Routes(r *gin.RouterGroup, appCtx app_context.AppContext) {
+	// Public routes
+	r.POST("/google", gin_auth.HandleGoogleLogin(appCtx))
 
-	r.GET("/login", gin_order.CreateOrderHandler(appCtx))
-	r.GET("/auth", gin_auth.OAuthHandler(appCtx))
-	r.POST("/oauth", gin_auth.HandleGoogleOAuth(appCtx))
-
-	r.GET("/callback", gin_auth.OAuthCallbackHandler(appCtx))
-
-	// Polling Endpoint
-	r.GET("/order-status/:orderId", gin_order.GetOrderStatusHandler(appCtx))
-
+	// Protected routes
+	protected := r.Group("")
+	protected.Use(gin_auth.AuthMiddleware(appCtx))
+	{
+		r.GET("/order-status/:orderId", gin_order.GetOrderStatusHandler(appCtx))
+		// Add other protected routes here
+	}
 }

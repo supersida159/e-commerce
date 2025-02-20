@@ -41,18 +41,18 @@ type Schema struct {
 		EnableTLS            bool     `yaml:"KAFKA_ENABLE_TLS"`
 		KafkaVersion         string   `yaml:"KAFKA_VERSION"`
 		Timeout              int      `yaml:"KAFKA_TIMEOUT"`
-	}
+	} `yaml:"KAFKA" env:"KAFKA"`
 	AWSS3 struct {
 		AccessKeyID     string `yaml:"AWS_ACCESS_KEY_ID"`
 		SecretAccessKey string `yaml:"AWS_SECRET_ACCESS_KEY"`
 		Region          string `yaml:"AWS_REGION"`
 		EndPoint        string `yaml:"AWS_ENDPOINT"`
 		Bucket          string `yaml:"AWS_BUCKET_NAME"`
-	}
+	} `yaml:"AWS_S3"`
 	OAuth struct {
 		ClientID     string `yaml:"OAUTH_CLIENT_ID"`
 		ClientSecret string `yaml:"OAUTH_CLIENT_SECRET"`
-	}
+	} `yaml:"OAUTH"`
 }
 
 var cfg Schema

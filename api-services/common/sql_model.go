@@ -20,7 +20,27 @@ func (m *SQLModel) GenUID(dbType int) {
 	m.ID = 0
 }
 func (m *SQLModel) DeID() {
-	m.FakeId = nil
-	fmt.Print("id:", m.ID)
+	// If FakeId is nil, there's nothing to do
+	if m.FakeId == nil {
+		fmt.Println("FakeId is nil, no action needed")
+		return
+	}
 
+	// Get the base58 string representation from FakeId
+	uidString := m.FakeId.String() // This converts FakeId (UID) to string (base58 encoded)
+
+	// Decode the FakeId string (base58) back to a UID
+	uid, err := FromBase58(uidString)
+	if err != nil {
+		// Handle the error if the UID decoding fails
+		fmt.Println("Failed to decode FakeId:", err)
+		return
+	}
+
+	// Extract the original fields (localID, objecttype, shardID)
+	m.ID = int(uid.GetLocalID()) // Assuming you want to restore the ID field with localID
+	m.FakeId = nil               // Reset the FakeId after extraction
+
+	// Optionally, log or handle the extracted values (localID, objecttype, shardID)
+	fmt.Printf("Decomposed UID - ID: %d, ObjectType: %d, ShardID: %d\n", m.ID, uid.GetObjectType(), uid.GetShardID())
 }
