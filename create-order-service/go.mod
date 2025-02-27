@@ -3,7 +3,6 @@ module github.com/supersida159/e-commerce/create-order
 go 1.21.6
 
 require (
-	github.com/caarlos0/env/v6 v6.10.1
 	github.com/joho/godotenv v1.5.1
 	gorm.io/driver/mysql v1.5.7
 )
