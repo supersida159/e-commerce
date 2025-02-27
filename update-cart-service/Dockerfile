@@ -1,6 +1,6 @@
-# api-services/Dockerfile
+# update-cart-service/Dockerfile
 # Build stage
-FROM golang:1.22-alpine AS builder
+FROM golang:1.21-alpine AS builder
 
 # Install git and SSL ca certificates
 RUN apk update && \
@@ -56,5 +56,5 @@ RUN chown -R appuser:appuser /app
 
 # Use non-root user
 USER appuser
-EXPOSE 8090 8889
+EXPOSE 8090
 CMD ["./main"]

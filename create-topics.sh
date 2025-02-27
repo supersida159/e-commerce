@@ -1,5 +1,5 @@
 #!/bin/bash
-
+@REM create-topics.bat
 # Wait for Kafka to be ready
 echo "Waiting for Kafka to be ready..."
 sleep 20

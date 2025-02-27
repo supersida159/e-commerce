@@ -1,0 +1,14 @@
+# C:\Users\Tung\Downloads\Golang\E-commerce\grafana\provisioning\datasources\influxdb.yaml
+apiVersion: 1
+
+datasources:
+  - name: influxdb
+    uid: influxdb
+    type: influxdb
+    access: proxy
+    database: k6
+    url: http://influxdb:8086
+    isDefault: true
+    editable: true
+    jsonData:
+      timeInterval: "10s"

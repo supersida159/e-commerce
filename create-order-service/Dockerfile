@@ -1,6 +1,6 @@
-# api-services/Dockerfile
+# create-order-service/Dockerfile
 # Build stage
-FROM golang:1.22-alpine AS builder
+FROM golang:1.21-alpine AS builder
 
 # Install git and SSL ca certificates
 RUN apk update && \
@@ -49,12 +49,12 @@ WORKDIR /app
 
 # Copy binary and config from builder
 COPY --from=builder /app/main .
-COPY --from=builder /app/pkg/config/config.sample.yaml /app/pkg/config/config.sample.yaml
+COPY --from=builder /app/pkg/config/config.sample.yaml /app/config/config.sample.yaml
 
 # Set ownership of the application files
 RUN chown -R appuser:appuser /app
 
 # Use non-root user
 USER appuser
-EXPOSE 8090 8889
+EXPOSE 8090
 CMD ["./main"]

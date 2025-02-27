@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"log"
 	"path/filepath"
 	"runtime"
@@ -70,7 +71,7 @@ func LoadConfig() *Schema {
 	if err := env.Parse(&cfg.Kafka); err != nil {
 		log.Fatalf("Error on parsing configuration file, error: %v", err)
 	}
-
+	fmt.Println("kafka:", cfg.Kafka.Brokers)
 	return &cfg
 }
 
