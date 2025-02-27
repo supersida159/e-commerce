@@ -55,6 +55,7 @@ func main() {
 
 	// Initialize Kafka producer
 	producer, err := producers.NewOrderProducer(cfg)
+
 	if err != nil {
 		log.Fatal("Failed to initialize Kafka producer:", err)
 	}

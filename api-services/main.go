@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"reflect"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -70,6 +71,14 @@ func main() {
 	newKafkaConfig := kafkaconfig.NewKafkaConfig(brokers)
 	producer, err := producers.NewOrderProducer(newKafkaConfig) // Pass config.Schema to producer
 	if err != nil {
+		x := reflect.TypeOf(err)
+		fmt.Println("type of err:", x)
+		if appErr, ok := err.(*common.AppError); ok {
+			fmt.Println("RootErr:", appErr.RootErr)
+		} else {
+			fmt.Println("error is normal err:", err)
+		}
+
 		log.Fatalf("Failed to create producer: %v", err)
 	}
 	defer producer.Close()
