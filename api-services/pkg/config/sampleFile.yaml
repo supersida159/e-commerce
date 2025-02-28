@@ -1,0 +1,38 @@
+# General environment configuration
+ENVIRONMENT: "Development"
+HTTP_PORT: 8090
+GRPC_PORT: 8889
+AUTH_SECRET: "your-auth-secret"
+SECRET_KEY: "your-secret-key"
+
+# Database Configuration
+DATABASE_URI: "root:password@tcp(mysql:3306)/e-commerce?parseTime=true"
+DATABASE_TIMEOUT: 5 # Timeout in seconds for database connections
+
+# Redis Configuration
+REDIS_URI: "redis:6379"
+REDIS_PASSWORD: ""
+REDIS_DB: 0
+
+# Kafka Configuration
+KAFKA:
+  KAFKA_BROKERS: ["kafka:29092"]
+  KAFKA_RETRY: 3
+  KAFKA_CONSUMER_OFFSET_RESET: "earliest"
+  KAFKA_PRODUCER_REQUIRED_ACKS: 1
+  KAFKA_ENABLE_TLS: false
+  KAFKA_VERSION: "2.8.0"
+  KAFKA_TIMEOUT: 3000
+
+# AWS S3 Configuration
+AWS_S3:
+  AWS_REGION: "your-region"
+  AWS_BUCKET_NAME: "your-bucket-name"
+  AWS_ACCESS_KEY_ID: "your-access-key-id"
+  AWS_SECRET_ACCESS_KEY: "your-secret-access-key"
+  AWS_ENDPOINT: "https://your-bucket.s3.your-region.amazonaws.com"
+
+# OAuth2 Configuration
+OAUTH:
+  OAUTH_CLIENT_ID: "your-oauth-client-id"
+  OAUTH_CLIENT_SECRET: "your-oauth-client-secret"
